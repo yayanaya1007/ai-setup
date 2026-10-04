@@ -1,0 +1,17 @@
+# 공개용 파일만 GitHub에 올립니다.
+/*
+!/index.html
+!/assets/
+!/assets/**
+!/.nojekyll
+!/README.md
+!/.gitignore
+!/LICENSES.txt
+
+# 사용자 자료 및 비밀 설정
+*.hwpx
+*.hwp
+*.zip
+*.exe
+*.log
+.env*
