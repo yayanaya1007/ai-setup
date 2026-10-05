@@ -1,4 +1,4 @@
-# 공개용 파일만 GitHub에 올립니다.
+# 공개용으로 배포한 정적 파일만 추적합니다.
 /*
 !/index.html
 !/assets/
@@ -7,6 +7,7 @@
 !/README.md
 !/.gitignore
 !/LICENSES.txt
+!/favicon.svg
 
 # 사용자 자료 및 비밀 설정
 *.hwpx
