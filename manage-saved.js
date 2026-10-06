@@ -10,7 +10,8 @@
       if (!key || !key.startsWith(prefix)) continue;
       try {
         const project = JSON.parse(localStorage.getItem(key) || "null");
-        if (project && project.month && project.name && Array.isArray(project.records)) {
+        if (project && project.month && Array.isArray(project.records)) {
+          if (typeof project.name !== "string") project.name = "";
           items.push({ key, project });
         }
       } catch {}
@@ -63,6 +64,10 @@
     return dirty ? "\n저장하지 않은 현재 입력 내용도 새로고침하면 사라집니다." : "";
   }
 
+  function displayName(project) {
+    return project.name.trim() || "이름 미입력";
+  }
+
   function projectKey(project) {
     return prefix + project.month + "|" + encodeURIComponent(project.name.trim());
   }
@@ -105,7 +110,7 @@
   async function deleteDay(item, record) {
     const project = item.project;
     const unsaved = warnUnsaved();
-    if (!window.confirm(project.name + "님 · " + record.date + " 일지를 삭제하시겠습니까?" +
+    if (!window.confirm(displayName(project) + " · " + record.date + " 일지를 삭제하시겠습니까?" +
       unsaved + "\n삭제한 일지는 복구할 수 없습니다.")) return;
     const records = project.records.filter(row => row.date !== record.date);
     const usedSources = new Set(records.map(row => row.sourceId).filter(Boolean));
@@ -130,7 +135,7 @@
 
   async function deleteMonth(item) {
     const project = item.project;
-    if (!window.confirm(project.name + "님의 " + project.month +
+    if (!window.confirm(displayName(project) + " · " + project.month +
       " 활동일지와 출근부 자료를 모두 삭제하시겠습니까?" + warnUnsaved() +
       "\n삭제한 자료는 복구할 수 없습니다.")) return;
     const ids = (project.assets || []).map(asset => asset.id);
@@ -160,7 +165,7 @@
       cardHead.className = "jdm-card-head";
       const label = document.createElement("div");
       label.className = "jdm-card-title";
-      label.textContent = project.name + " · " + project.month + " · " + project.records.length + "일";
+      label.textContent = displayName(project) + " · " + project.month + " · " + project.records.length + "일";
       const allButton = button("이 월 자료 전체 삭제", true);
       allButton.addEventListener("click", () => deleteMonth(item));
       cardHead.append(label, allButton);
