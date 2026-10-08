@@ -223,7 +223,7 @@ if(head){
 }
 let imageUrl=new Map();
 function base64(bytes){let result="";for(let offset=0;offset<bytes.length;offset+=0x8000)result+=String.fromCharCode(...bytes.subarray(offset,offset+0x8000));return btoa(result)}
-function imageSource(pic){let image=descendants(pic,"img")[0],ref=image?.getAttribute("binaryItemIDRef");if(!ref)return "";if(imageUrl.has(ref))return imageUrl.get(ref);let file=manifest.get(ref);if(!file)return "";let bytes=archive[file.path];if(!bytes)return "";let src="data:"+file.type+";base64,"+base64(bytes);imageUrl.set(ref,src);return src}
+function imageSource(pic){let image=descendants(pic,"img",coreNs)[0],ref=image?.getAttribute("binaryItemIDRef");if(!ref)return "";if(imageUrl.has(ref))return imageUrl.get(ref);let file=manifest.get(ref);if(!file)return "";let bytes=archive[file.path];if(!bytes)return "";let src="data:"+file.type+";base64,"+base64(bytes);imageUrl.set(ref,src);return src}
 function borderCss(fill,name){let edge=child(fill,name);if(!edge)return "none";let type=edge.getAttribute("type")||"NONE";if(type==="NONE")return "none";let width=(edge.getAttribute("width")||"0.12 mm").match(/[\d.]+/)?.[0]||"0.12";let style=type.includes("DOUBLE")?"double":type.includes("DASH")||type.includes("DOT")?"dashed":"solid";return width+"mm "+style+" "+(edge.getAttribute("color")||"#000")}
 function fillColor(fill){let brush=child(fill,"fillBrush");if(!brush)return "";let solid=descendants(brush,"solidFill",coreNs)[0]||descendants(brush,"winBrush",coreNs)[0];if(!solid)return "";return solid.getAttribute("faceColor")||solid.getAttribute("color")||solid.getAttribute("fillColor")||""}
 function inline(node){
