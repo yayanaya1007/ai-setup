@@ -122,8 +122,9 @@
     if (target && !confirm(`${project.month} ${project.name || '이름 미입력'} 작업이 이미 있습니다. 기존 활동일지와 운영현황을 공유 파일 내용으로 바꿀까요?`)) return false;
     const idMap = new Map();
     for (const asset of project.assets) {
-      if (!asset || typeof asset.id !== 'string' || typeof asset.file !== 'string' || !asset.file.startsWith('assets/')) throw new Error('첨부 파일 정보가 올바르지 않습니다.');
-      const data = entries.get(asset.file); if (!data) throw new Error(`공유 파일에 첨부 자료가 없습니다: ${asset.name || asset.id}`);
+      if (!asset || typeof asset.id !== 'string' || !asset.id) throw new Error('첨부 파일 정보가 올바르지 않습니다.');
+      const filePath = typeof asset.file === 'string' && asset.file.startsWith('assets/') ? asset.file : `assets/${asset.id}`;
+      const data = entries.get(filePath) || entries.get(`assets/${asset.id}`); if (!data) throw new Error(`공유 파일에 첨부 자료가 없습니다: ${asset.name || asset.id}`);
       const newId = crypto.randomUUID(); idMap.set(asset.id, newId);
       await putAsset(newId, new Blob([data], { type: asset.type || 'application/octet-stream' }));
       asset.id = newId; delete asset.file; asset.url = '';
