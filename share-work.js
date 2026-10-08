@@ -168,7 +168,7 @@
       if (!pendingImport) return;
       window.dispatchEvent(new CustomEvent('volunteer-journal:imported', { detail: pendingImport }));
       setStatus(`${pendingImport.month} ${pendingImport.name || '이름 미입력'} 일지와 첨부 파일을 화면에 적용했습니다.`);
-      pendingImport = null; applyImported.hidden = true;
+      pendingImport = null; applyImported.hidden = true; close();
     });
     modal.addEventListener('click', event => { if (event.target === modal) close(); });
     window.addEventListener('keydown', event => { if (event.key === 'Escape' && !modal.hidden) close(); });
