@@ -255,14 +255,16 @@ function inline(node){
 function tableHtml(table){
  let rows=Array.from(table.children||[]).filter(node=>node.localName==="tr"),tableSize=child(table,"sz"),tableWidth=Number(tableSize?.getAttribute("width")||0)/283.465,style=tableWidth?"width:"+tableWidth+"mm;":"";
  let pos=child(table,"pos"),align=pos?.getAttribute("horzAlign");if(align==="CENTER")style+="margin-left:auto;margin-right:auto;";else if(align==="RIGHT")style+="margin-left:auto;margin-right:0;";
- let html="<table class=\"preview-table\" style=\""+style+"\"><tbody>";
+ let attendanceGrid=Number(table.getAttribute("colCnt"))===18&&rows.some(row=>{let cells=Array.from(row.children||[]).filter(node=>node.localName==="tc");return cells.length===17&&descendants(cells[0],"t").map(x=>x.textContent).join("").replace(/\s/g,"")==="날짜"});
+ let columns=attendanceGrid?"<colgroup>"+Array.from({length:18},(_,i)=>"<col style=\"width:"+((i<16?1:0.5)/17*100)+"%\">").join("")+"</colgroup>":"";
+ let html="<table class=\"preview-table\" style=\""+style+"\">"+columns+"<tbody>";
  for(let row of rows){
   html+="<tr>";
   for(let cell of Array.from(row.children||[]).filter(node=>node.localName==="tc")){
    let size=child(cell,"cellSz"),span=child(cell,"cellSpan"),w=Number(size?.getAttribute("width")||0)/283.465,h=Number(size?.getAttribute("height")||0)/283.465,attrs="",styleText="";
    if(span?.getAttribute("colSpan")&&span.getAttribute("colSpan")!=="1")attrs+=" colspan=\""+previewEscape(span.getAttribute("colSpan"))+"\"";
    if(span?.getAttribute("rowSpan")&&span.getAttribute("rowSpan")!=="1")attrs+=" rowspan=\""+previewEscape(span.getAttribute("rowSpan"))+"\"";
-   if(w)styleText+="width:"+w+"mm;";
+   if(w&&!attendanceGrid)styleText+="width:"+w+"mm;";
    if(h)styleText+="height:"+h+"mm;";
    let margin=child(cell,"cellMargin");if(margin)styleText+="padding:"+Number(margin.getAttribute("top")||0)/283.465+"mm "+Number(margin.getAttribute("right")||0)/283.465+"mm "+Number(margin.getAttribute("bottom")||0)/283.465+"mm "+Number(margin.getAttribute("left")||0)/283.465+"mm;";
    let fill=borders.get(cell.getAttribute("borderFillIDRef"));
