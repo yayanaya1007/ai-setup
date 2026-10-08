@@ -137,22 +137,24 @@
     if (operations.groups != null) localStorage.setItem(`${PREFIX}centers`, operations.groups); else localStorage.removeItem(`${PREFIX}centers`);
     const monthKey = `${PREFIX}operations:months`;
     try { const months = JSON.parse(localStorage.getItem(monthKey) || '[]'); if (Array.isArray(months) && !months.includes(project.month)) localStorage.setItem(monthKey, JSON.stringify([...months, project.month].sort((a, b) => b.localeCompare(a)))); } catch { localStorage.setItem(monthKey, JSON.stringify([project.month])); }
-    return true;
+    return { month: project.month, name: project.name || "" };
   }
 
   function install() {
     if (document.querySelector('#share-work-tools')) return;
     const header = document.querySelector('.topbar'), privateLabel = header?.querySelector('.private-label'); if (!header || !privateLabel) return;
     if (!document.querySelector('#share-work-style')) {
-      const style = document.createElement('style'); style.id = 'share-work-style'; style.textContent = `.share-work-tools{display:flex;align-items:center}.share-work-button,.share-work-primary,.share-work-secondary{border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#172033;padding:9px 13px;font:600 13px inherit;cursor:pointer}.share-work-button:hover,.share-work-secondary:hover{background:#f1f5f9}.share-work-backdrop[hidden]{display:none}.share-work-backdrop{position:fixed;z-index:10000;inset:0;background:#10182899;display:grid;place-items:center;padding:18px}.share-work-card{position:relative;box-sizing:border-box;width:min(560px,100%);max-height:90vh;overflow:auto;border-radius:16px;background:#fff;padding:28px;box-shadow:0 20px 70px #0003;color:#172033;font:14px/1.55 system-ui,sans-serif}.share-work-card h2{font-size:22px;margin:4px 0 10px}.share-work-card>p{color:#475569}.share-work-close{position:absolute;right:14px;top:10px;border:0;background:transparent;font-size:28px;color:#64748b;cursor:pointer}.share-work-label{display:grid;gap:8px;margin:20px 0 14px;font-weight:600}.share-work-label select{min-width:0;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}.share-work-actions{display:flex;flex-wrap:wrap;gap:10px}.share-work-primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}.share-work-primary:disabled{opacity:.6}.share-work-secondary{display:inline-flex;align-items:center}.share-work-card #share-work-status{min-height:22px;margin:16px 0 0;color:#166534}.share-work-card #share-work-status[data-error=true]{color:#b91c1c}@media(max-width:760px){.topbar{flex-wrap:wrap}.share-work-tools{order:3;width:100%}.share-work-button{width:100%}.share-work-card{padding:24px 18px}.share-work-actions{display:grid}.share-work-primary,.share-work-secondary{justify-content:center;min-height:42px}}`; document.head.append(style);
+      const style = document.createElement('style'); style.id = 'share-work-style'; style.textContent = `.share-work-tools{display:flex;align-items:center}.share-work-button,.share-work-primary,.share-work-secondary{border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#172033;padding:9px 13px;font:600 13px inherit;cursor:pointer}.share-work-button:hover,.share-work-secondary:hover{background:#f1f5f9}.share-work-backdrop[hidden]{display:none}.share-work-backdrop{position:fixed;z-index:10000;inset:0;background:#10182899;display:grid;place-items:center;padding:18px}.share-work-card{position:relative;box-sizing:border-box;width:min(560px,100%);max-height:90vh;overflow:auto;border-radius:16px;background:#fff;padding:28px;box-shadow:0 20px 70px #0003;color:#172033;font:14px/1.55 system-ui,sans-serif}.share-work-card h2{font-size:22px;margin:4px 0 10px}.share-work-card>p{color:#475569}.share-work-close{position:absolute;right:14px;top:10px;border:0;background:transparent;font-size:28px;color:#64748b;cursor:pointer}.share-work-label{display:grid;gap:8px;margin:20px 0 14px;font-weight:600}.share-work-label select{min-width:0;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}.share-work-actions{display:flex;flex-wrap:wrap;gap:10px}.share-work-primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}.share-work-primary:disabled{opacity:.6}.share-work-primary[hidden]{display:none}.share-work-secondary{display:inline-flex;align-items:center}.share-work-card #share-work-status{min-height:22px;margin:16px 0 0;color:#166534}.share-work-card #share-work-status[data-error=true]{color:#b91c1c}@media(max-width:760px){.topbar{flex-wrap:wrap}.share-work-tools{order:3;width:100%}.share-work-button{width:100%}.share-work-card{padding:24px 18px}.share-work-actions{display:grid}.share-work-primary,.share-work-secondary{justify-content:center;min-height:42px}}`; document.head.append(style);
     }
     const tools = document.createElement('div'); tools.id = 'share-work-tools'; tools.className = 'share-work-tools';
     const open = document.createElement('button'); open.type = 'button'; open.className = 'share-work-button'; open.textContent = '작업 공유·가져오기'; open.setAttribute('aria-haspopup', 'dialog');
     tools.append(open); header.insertBefore(tools, privateLabel);
     const modal = document.createElement('section'); modal.id = 'share-work-dialog'; modal.className = 'share-work-backdrop'; modal.hidden = true; modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-labelledby', 'share-work-title');
-    modal.innerHTML = `<div class="share-work-card"><button type="button" class="share-work-close" aria-label="닫기">×</button><p class="eyebrow">작업 파일 공유</p><h2 id="share-work-title">사진과 운영현황까지 한 파일로</h2><p>저장한 월별 활동일지, 원본 PDF·한글파일, 날짜별 사진과 서명, 해당 월의 거점운영현황을 묶습니다. 받은 사람은 이 파일을 불러와 계속 편집한 다음 한글파일·엑셀·PDF로 저장할 수 있습니다.</p><label class="share-work-label">공유할 저장 작업<select id="share-work-project"></select></label><div class="share-work-actions"><button type="button" id="share-work-export" class="share-work-primary">파일 다운로드</button><label for="share-work-file" class="share-work-secondary">받은 작업 파일 가져오기</label><input id="share-work-file" type="file" accept=".vjournal,.zip,application/zip" hidden></div><p id="share-work-status" role="status" aria-live="polite"></p></div>`;
+    modal.innerHTML = `<div class="share-work-card"><button type="button" class="share-work-close" aria-label="닫기">×</button><p class="eyebrow">작업 파일 공유</p><h2 id="share-work-title">사진과 운영현황까지 한 파일로</h2><p>저장한 월별 활동일지, 원본 PDF·한글파일, 날짜별 사진과 서명, 해당 월의 거점운영현황을 묶습니다. 받은 사람은 이 파일을 불러와 계속 편집한 다음 한글파일·엑셀·PDF로 저장할 수 있습니다.</p><label class="share-work-label">공유할 저장 작업<select id="share-work-project"></select></label><div class="share-work-actions"><button type="button" id="share-work-export" class="share-work-primary">파일 다운로드</button><label for="share-work-file" class="share-work-secondary">받은 작업 파일 가져오기</label><input id="share-work-file" type="file" accept=".vjournal,.zip,application/zip" hidden><button type="button" id="share-work-apply" class="share-work-primary" hidden>확인</button></div><p id="share-work-status" role="status" aria-live="polite"></p></div>`;
     document.body.append(modal);
     const select = modal.querySelector('#share-work-project');
+    let pendingImport = null;
+    const applyImported = modal.querySelector('#share-work-apply');
     function refresh() {
       const selected = select.value, items = savedProjects(); select.replaceChildren();
       for (const item of items) { const option = document.createElement('option'); option.value = item.key; option.textContent = `${item.project.month} · ${item.project.name || '활동가 이름 미입력'} · 사진·파일 ${item.project.assets.length}개`; select.append(option); }
@@ -162,6 +164,12 @@
     const close = () => { modal.hidden = true; };
     open.addEventListener('click', () => { refresh(); modal.hidden = false; modal.querySelector('.share-work-close').focus(); });
     modal.querySelector('.share-work-close').addEventListener('click', close);
+    applyImported.addEventListener('click', () => {
+      if (!pendingImport) return;
+      window.dispatchEvent(new CustomEvent('volunteer-journal:imported', { detail: pendingImport }));
+      setStatus(`${pendingImport.month} ${pendingImport.name || '이름 미입력'} 일지와 첨부 파일을 화면에 적용했습니다.`);
+      pendingImport = null; applyImported.hidden = true;
+    });
     modal.addEventListener('click', event => { if (event.target === modal) close(); });
     window.addEventListener('keydown', event => { if (event.key === 'Escape' && !modal.hidden) close(); });
     modal.querySelector('#share-work-export').addEventListener('click', async () => {
@@ -171,7 +179,7 @@
     });
     modal.querySelector('#share-work-file').addEventListener('change', async event => {
       const input = event.currentTarget, file = input.files?.[0]; if (!file) return;
-      try { const imported = await importProject(file); if (imported) { setStatus('작업과 사진을 가져왔습니다. 페이지를 새로고침한 뒤 저장된 일지에서 해당 월과 이름을 선택하세요.'); refresh(); } }
+      try { const imported = await importProject(file); if (imported) { pendingImport = imported; applyImported.hidden = false; setStatus('작업과 사진을 가져왔습니다. 확인 버튼을 누르면 현재 화면에 적용됩니다.'); refresh(); } }
       catch (error) { setStatus(error.message || '공유 파일을 가져오지 못했습니다.', true); }
       finally { input.value = ''; }
     });
