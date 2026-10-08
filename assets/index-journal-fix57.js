@@ -68,8 +68,8 @@ titleTexts[1].textContent=' '+year+'. '+monthNumber+'. 1. ~ '+daysInMonth+'.';
 let nameCell=ch(table,0,14);
 if(!nameCell)throw Error('활동가 이름 칸을 찾지 못했습니다.');
 sh(nameCell,[names[0]]);
-let hasTopSecond=records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<17&&x.start2&&x.end2;});
-let hasBottomSecond=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&x.start2&&x.end2;});
+let hasTopSecond=includeDailyHours&&records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<17&&x.start2&&x.end2;});
+let hasBottomSecond=includeDailyHours&&records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&x.start2&&x.end2;});
 let splitBorders;
 if(hasTopSecond||hasBottomSecond){
 let headNs='http://www.hancom.co.kr/hwpml/2011/head',headerDoc=new DOMParser().parseFromString(Lm(archive['Contents/header.xml']),'application/xml'),borderList=headerDoc.getElementsByTagNameNS(headNs,'borderFills')[0];
@@ -119,13 +119,13 @@ let day=firstDay+i,col=i+1,dateCell=ch(table,dateRow,col),activityCell=ch(table,
 validDay=day<=daysInMonth,record=validDay?records.find(x=>+x.date.slice(-2)===day):undefined;
 if(dateCell)sh(dateCell,[validDay?String(day):'']);
 if(activityCell){
-let split=!!(record?.start2&&record?.end2),height=sectionHasSecond?(split?2800:5600):baseActivityHeight;
+let hasSecondActivity=!!(record?.start2&&record?.end2),split=includeDailyHours&&hasSecondActivity,height=sectionHasSecond?(split?2800:5600):hasSecondActivity?5600:baseActivityHeight;
 compactCell(activityCell,height);
 if(record){
 let minutes=recordMinutes(record);
 if(minutes===null)throw Error(day+'일 시작·종료 시간을 확인해 주세요.');
 totalMinutes+=minutes;
-fillCellLines(activityCell,[record.start+'~',record.end]);
+fillCellLines(activityCell,!includeDailyHours&&hasSecondActivity?[record.start+'~',record.end,record.start2+'~',record.end2]:[record.start+'~',record.end]);
 if(split){let secondCell=ch(table,activityRow+1,col);if(!secondCell)throw Error(day+'일 두 번째 활동시간 칸을 찾지 못했습니다.');compactCell(secondCell,2800);fillCellLines(secondCell,[record.start2+'~',record.end2]);}
 }else fillCellLines(activityCell,validDay?['00:00~','00:00']:['','']);
 }
@@ -138,7 +138,7 @@ let hoursCell=ch(table,tripRow+1,col);
 if(hoursCell){let minutes=record?recordMinutes(record):null;sh(hoursCell,includeDailyHours&&minutes!==null?[String(Number((minutes/60).toFixed(1)))]:['']);}
 }
 }
-if(includeDailyHours){let sumRange=(start,end)=>records.reduce((sum,record)=>{let day=+record.date.slice(-2);if(day<start||day>end)return sum;let minutes=recordMinutes(record);return minutes===null?sum:sum+minutes;},0),showHours=minutes=>String(Number((minutes/60).toFixed(1))),topHoursRow=5+(hasTopSecond?1:0),bottomHoursRow=10+(hasTopSecond?1:0)+(hasBottomSecond?1:0),day16=records.find(record=>+record.date.slice(-2)===16),topLast=ch(table,topHoursRow,16),topTotalCell;if(day16){topTotalCell=ch(table,topHoursRow,17);}else if(topLast){let next=ch(table,topHoursRow,17),span=oh(topLast,'cellSpan')[0],size=oh(topLast,'cellSz')[0],nextSize=next&&oh(next,'cellSz')[0];if(next&&span&&size&&nextSize){span.setAttribute('colSpan','2');size.setAttribute('width',String(Number(size.getAttribute('width')||0)+Number(nextSize.getAttribute('width')||0)));topLast.setAttribute('borderFillIDRef',next.getAttribute('borderFillIDRef')||topLast.getAttribute('borderFillIDRef'));next.remove();}topTotalCell=topLast;}if(topTotalCell){let value=showHours(sumRange(1,16));setFormulaResult(topTotalCell,value);sh(topTotalCell,[value]);}let bottomTotalCell=ch(table,bottomHoursRow,16);if(bottomTotalCell){let value=showHours(sumRange(17,daysInMonth));setFormulaResult(bottomTotalCell,value);sh(bottomTotalCell,[value]);}}let totalHours=Number((totalMinutes/60).toFixed(1)),totalText=String(totalHours),summaryCell=ch(table,12+(hasTopSecond?1:0)+(hasBottomSecond?1:0),15);
+if(includeDailyHours){let sumRange=(start,end)=>records.reduce((sum,record)=>{let day=+record.date.slice(-2);if(day<start||day>end)return sum;let minutes=recordMinutes(record);return minutes===null?sum:sum+minutes;},0),showHours=minutes=>String(Number((minutes/60).toFixed(1))),topHoursRow=5+(hasTopSecond?1:0),bottomHoursRow=10+(hasTopSecond?1:0)+(hasBottomSecond?1:0),day16=records.find(record=>+record.date.slice(-2)===16),topLast=ch(table,topHoursRow,16),topTotalCell;if(day16){topTotalCell=ch(table,topHoursRow,17);}else if(topLast){let next=ch(table,topHoursRow,17),span=oh(topLast,'cellSpan')[0],size=oh(topLast,'cellSz')[0],nextSize=next&&oh(next,'cellSz')[0];if(next&&span&&size&&nextSize){span.setAttribute('colSpan','2');size.setAttribute('width',String(Number(size.getAttribute('width')||0)+Number(nextSize.getAttribute('width')||0)));topLast.setAttribute('borderFillIDRef',next.getAttribute('borderFillIDRef')||topLast.getAttribute('borderFillIDRef'));next.remove();}topTotalCell=topLast;}if(topTotalCell){let value=showHours(sumRange(1,16));setFormulaResult(topTotalCell,value);sh(topTotalCell,[value]);}let bottomTotalCell=ch(table,bottomHoursRow,16);if(bottomTotalCell){let value=showHours(sumRange(17,daysInMonth));setFormulaResult(bottomTotalCell,value);sh(bottomTotalCell,[value]);}}else{for(let cell of [ch(table,5,17),ch(table,10,16)])if(cell){for(let control of oh(cell,'ctrl'))control.remove();sh(cell,[]);}}let totalHours=Number((totalMinutes/60).toFixed(1)),totalText=String(totalHours),summaryCell=ch(table,12+(hasTopSecond?1:0)+(hasBottomSecond?1:0),15);
 summaryCell&&sh(summaryCell,[totalText+'시간']);
 oh(xml,'linesegarray').forEach(x=>x.remove());
 archive['Contents/section0.xml']=Im(new XMLSerializer().serializeToString(xml));
