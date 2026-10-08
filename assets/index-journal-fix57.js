@@ -57,6 +57,8 @@ let xml=new DOMParser().parseFromString(Lm(section),'application/xml');
 if(xml.querySelector('parsererror'))throw Error('출근부 서식 파일을 읽지 못했습니다.');
 let table=oh(xml,'tbl')[0];
 if(!table)throw Error('출근부 서식의 표를 찾지 못했습니다.');
+let pagePr=oh(xml,'pagePr')[0],pageMargin=pagePr&&oh(pagePr,'margin')[0];if(pagePr){pagePr.setAttribute('landscape','NARROWLY');pagePr.setAttribute('width','59528');pagePr.setAttribute('height','84186');}if(pageMargin)for(let [key,value] of Object.entries({top:5669,left:8504,right:2835,bottom:0,header:0,footer:4252,gutter:0}))pageMargin.setAttribute(key,String(value));
+let activityHeight=5386,halfActivityHeight=2693;
 let month=e.month,year=+month.slice(0,4),monthNumber=+month.slice(5),daysInMonth=new Date(year,monthNumber,0).getDate(),
 records=e.records.filter(x=>x.date.startsWith(month+'-')&&x.name.trim()===e.name.trim()),
 names=[...new Set(records.map(x=>x.name.trim()).filter(Boolean))];
@@ -85,21 +87,21 @@ if(!firstRow)throw Error('활동시간 칸을 찾지 못했습니다.');
 let newRow=firstRow.cloneNode(true),secondCells=[];
 for(let cell of Array.from(firstRow.children).filter(x=>x.localName==='tc')){
 let addr=oh(cell,'cellAddr')[0],col=Number(addr?.getAttribute('colAddr')||0),span=oh(cell,'cellSpan')[0],size=oh(cell,'cellSz')[0];
-if(col===0){span?.setAttribute('rowSpan','2');size?.setAttribute('height','5600');continue;}
+if(col===0){span?.setAttribute('rowSpan','2');size?.setAttribute('height',String(activityHeight));continue;}
 let rec=records.find(x=>+x.date.slice(-2)===firstDay+col-1);
 if(rec?.start2&&rec?.end2){
-span?.setAttribute('rowSpan','1');size?.setAttribute('height','2800');
+span?.setAttribute('rowSpan','1');size?.setAttribute('height',String(halfActivityHeight));
 let second=cell.cloneNode(true),secondAddr=oh(second,'cellAddr')[0],secondSpan=oh(second,'cellSpan')[0],secondSize=oh(second,'cellSz')[0],borderKind=col===16?'outer':'inner';
 cell.setAttribute('borderFillIDRef',splitBorders.first[borderKind]);second.setAttribute('borderFillIDRef',splitBorders.second[borderKind]);
-secondAddr?.setAttribute('rowAddr',String(rowIndex+1));secondSpan?.setAttribute('rowSpan','1');secondSize?.setAttribute('height','2800');
+secondAddr?.setAttribute('rowAddr',String(rowIndex+1));secondSpan?.setAttribute('rowSpan','1');secondSize?.setAttribute('height',String(halfActivityHeight));
 fillCellLines(second,[rec.start2+'~',rec.end2]);secondCells.push(second);
-}else{span?.setAttribute('rowSpan','2');size?.setAttribute('height','5600');}
+}else{span?.setAttribute('rowSpan','2');size?.setAttribute('height',String(activityHeight));}
 }
 secondCells.sort((x,y)=>Number(oh(x,'cellAddr')[0]?.getAttribute('colAddr')||0)-Number(oh(y,'cellAddr')[0]?.getAttribute('colAddr')||0));
 newRow.replaceChildren(...secondCells);
 newRow.querySelectorAll('tbl').forEach(x=>x.remove());
 firstRow.parentNode.insertBefore(newRow,firstRow.nextSibling);
-let tableSize=oh(table,'sz')[0];tableSize?.setAttribute('height',String(Number(tableSize.getAttribute('height')||0)+2800));
+let tableSize=oh(table,'sz')[0];tableSize?.setAttribute('height',String(Number(tableSize.getAttribute('height')||0)+halfActivityHeight));
 };
 if(hasTopSecond)insertActivityRow(3,1);
 if(hasBottomSecond)insertActivityRow(8+(hasTopSecond?1:0),17);
@@ -109,24 +111,24 @@ allRows.forEach((row,rowIndex)=>Array.from(row.children).filter(x=>x.localName==
 let totalMinutes=0;
 for(let [dateRow,firstDay,activityRow,tripRow] of [[2,1,3,4+(hasTopSecond?1:0)],[7+(hasTopSecond?1:0),17,8+(hasTopSecond?1:0),9+(hasTopSecond?1:0)+(hasBottomSecond?1:0)]]){
 let sectionHasSecond=firstDay===1?hasTopSecond:hasBottomSecond,
-baseActivityHeight=firstDay===1?3974:4251,
+baseActivityHeight=activityHeight,
 tripLines=records.reduce((max,x)=>{let day=+x.date.slice(-2);return day>=firstDay&&day<firstDay+16?Math.max(max,x.trips.filter(t=>t.start&&t.end).length):max;},0),
 tripHeight=Math.max(2600,tripLines*2800);
-compactCell(ch(table,activityRow,0),sectionHasSecond?5600:baseActivityHeight);
+compactCell(ch(table,activityRow,0),sectionHasSecond?activityHeight:baseActivityHeight);
 compactCell(ch(table,tripRow,0),tripHeight);
 for(let i=0;i<16;i++){
 let day=firstDay+i,col=i+1,dateCell=ch(table,dateRow,col),activityCell=ch(table,activityRow,col),tripCell=ch(table,tripRow,col),
 validDay=day<=daysInMonth,record=validDay?records.find(x=>+x.date.slice(-2)===day):undefined;
 if(dateCell)sh(dateCell,[validDay?String(day):'']);
 if(activityCell){
-let hasSecondActivity=!!(record?.start2&&record?.end2),split=hasSecondActivity,height=sectionHasSecond?(split?2800:5600):hasSecondActivity?5600:baseActivityHeight;
+let hasSecondActivity=!!(record?.start2&&record?.end2),split=hasSecondActivity,height=sectionHasSecond?(split?halfActivityHeight:activityHeight):activityHeight;
 compactCell(activityCell,height);
 if(record){
 let minutes=recordMinutes(record);
 if(minutes===null)throw Error(day+'일 시작·종료 시간을 확인해 주세요.');
 totalMinutes+=minutes;
 fillCellLines(activityCell,[record.start+'~',record.end]);
-if(split){let secondCell=ch(table,activityRow+1,col);if(!secondCell)throw Error(day+'일 두 번째 활동시간 칸을 찾지 못했습니다.');compactCell(secondCell,2800);fillCellLines(secondCell,[record.start2+'~',record.end2]);}
+if(split){let secondCell=ch(table,activityRow+1,col);if(!secondCell)throw Error(day+'일 두 번째 활동시간 칸을 찾지 못했습니다.');compactCell(secondCell,halfActivityHeight);fillCellLines(secondCell,[record.start2+'~',record.end2]);}
 }else fillCellLines(activityCell,validDay?['00:00~','00:00']:['','']);
 }
 if(tripCell){
@@ -152,6 +154,7 @@ extra.remove();
 }
 }let totalHours=Number((totalMinutes/60).toFixed(1)),totalText=String(totalHours),summaryCell=ch(table,12+(hasTopSecond?1:0)+(hasBottomSecond?1:0),15);
 summaryCell&&sh(summaryCell,[totalText+'시간']);
+let tableSize=oh(table,'sz')[0];if(tableSize){let height=allRows.reduce((sum,row)=>{let cells=Array.from(row.children).filter(x=>x.localName==='tc'),single=cells.filter(cell=>Number(oh(cell,'cellSpan')[0]?.getAttribute('rowSpan')||1)===1),sizes=(single.length?single:cells).map(cell=>Number(oh(cell,'cellSz')[0]?.getAttribute('height')||0)/(single.length?1:Number(oh(cell,'cellSpan')[0]?.getAttribute('rowSpan')||1)));return sum+Math.max(0,...sizes);},0);tableSize.setAttribute('height',String(Math.round(height)));}
 oh(xml,'linesegarray').forEach(x=>x.remove());
 archive['Contents/section0.xml']=Im(new XMLSerializer().serializeToString(xml));
 archive['Preview/PrvText.txt']=Im(year+'년 '+monthNumber+'월 거점캠프 활동상황부');
