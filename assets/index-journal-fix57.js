@@ -230,7 +230,7 @@ function inline(node){
  if(node.nodeType===3)return previewEscape(node.nodeValue);
  if(node.nodeType!==1)return "";
  let name=node.localName;
- if(name==="t")return previewEscape(node.textContent||"");
+ if(name==="t")return Array.from(node.childNodes||[]).map(child=>child.nodeType===3?previewEscape(child.nodeValue):child.nodeType===1&&child.localName==="lineBreak"?"<br>":child.nodeType===1&&child.localName==="tab"?"　　":"").join("");
  if(name==="ctrl"){let field=descendants(node,"fieldBegin")[0];if(field?.getAttribute("type")==="FORMULA"){let result=descendants(field,"stringParam").find(item=>item.getAttribute("name")==="LastResult");return result?previewEscape(result.textContent||""):""}return ""}
  if(name==="lineBreak")return "<br>";
  if(name==="tab")return "　　";
