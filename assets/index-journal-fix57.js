@@ -231,7 +231,7 @@ function inline(node){
  if(node.nodeType!==1)return "";
  let name=node.localName;
  if(name==="t")return Array.from(node.childNodes||[]).map(child=>child.nodeType===3?previewEscape(child.nodeValue):child.nodeType===1&&child.localName==="lineBreak"?"<br>":child.nodeType===1&&child.localName==="tab"?"　　":"").join("");
- if(name==="ctrl"){let field=descendants(node,"fieldBegin")[0];if(field?.getAttribute("type")==="FORMULA"){let result=descendants(field,"stringParam").find(item=>item.getAttribute("name")==="LastResult");return result?previewEscape(result.textContent||""):""}return ""}
+ if(name==="ctrl"){let field=descendants(node,"fieldBegin")[0];if(field?.getAttribute("type")==="FORMULA"){let visibleResult=Array.from(node.parentElement?.children||[]).some(item=>item.localName==="t"&&(item.textContent||"").trim());if(visibleResult)return "";let result=descendants(field,"stringParam").find(item=>item.getAttribute("name")==="LastResult");return result?previewEscape(result.textContent||""):""}return ""}
  if(name==="lineBreak")return "<br>";
  if(name==="tab")return "　　";
  if(name==="run"){let body=Array.from(node.childNodes||[]).map(inline).join(""),style=chars.get(node.getAttribute("charPrIDRef"))||"";return style?"<span style=\""+style+"\">"+body+"</span>":body}
