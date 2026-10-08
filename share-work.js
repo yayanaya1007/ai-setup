@@ -105,10 +105,12 @@
       const file = `assets/${asset.id}`; const metadata = storedProject.assets.find(item => item.id === asset.id); metadata.file = file; entries.push([file, new Uint8Array(await blob.arrayBuffer())]);
     }
     const zip = makeZip(entries);
-    const output = new File([zip], makeFilename(project), { type: 'application/vnd.volunteer-journal' });
-    if (navigator.canShare?.({ files: [output] }) && navigator.share) await navigator.share({ files: [output], title: '활동일지 작업 공유', text: `${project.month} ${project.name || '이름 미입력'} 작업과 첨부 사진` });
-    else { const url = URL.createObjectURL(output), anchor = document.createElement('a'); anchor.href = url; anchor.download = output.name; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 30000); }
-    setStatus('활동일지와 첨부 자료를 한 파일로 만들었습니다. 메시지나 AirDrop으로 전달하면 받은 사람도 파일을 불러와 편집할 수 있습니다.');
+    const output = new Blob([zip], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(output), anchor = document.createElement('a');
+    anchor.href = url; anchor.download = makeFilename(project); anchor.style.display = 'none';
+    document.body.append(anchor); anchor.click(); anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    setStatus('공유 파일을 다운로드했습니다. 다운로드한 파일을 카카오톡·이메일·USB 등으로 전달한 뒤, 다른 컴퓨터에서 “받은 작업 파일 가져오기”를 눌러 불러오세요.');
   }
   function validateManifest(manifest) {
     if (!manifest || manifest.format !== FORMAT || manifest.version !== 1 || !manifest.project || !/^20\d{2}-(0[1-9]|1[0-2])$/.test(manifest.project.month) || !Array.isArray(manifest.project.records) || !Array.isArray(manifest.project.assets)) throw new Error('활동일지 앱에서 만든 작업 공유 파일이 아닙니다.');
@@ -147,7 +149,7 @@
     const open = document.createElement('button'); open.type = 'button'; open.className = 'share-work-button'; open.textContent = '작업 공유·가져오기'; open.setAttribute('aria-haspopup', 'dialog');
     tools.append(open); header.insertBefore(tools, privateLabel);
     const modal = document.createElement('section'); modal.id = 'share-work-dialog'; modal.className = 'share-work-backdrop'; modal.hidden = true; modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-labelledby', 'share-work-title');
-    modal.innerHTML = `<div class="share-work-card"><button type="button" class="share-work-close" aria-label="닫기">×</button><p class="eyebrow">작업 파일 공유</p><h2 id="share-work-title">사진과 운영현황까지 한 파일로</h2><p>저장한 월별 활동일지, 원본 PDF·한글파일, 날짜별 사진과 서명, 해당 월의 거점운영현황을 묶습니다. 받은 사람은 이 파일을 불러와 계속 편집한 다음 한글파일·엑셀·PDF로 저장할 수 있습니다.</p><label class="share-work-label">공유할 저장 작업<select id="share-work-project"></select></label><div class="share-work-actions"><button type="button" id="share-work-export" class="share-work-primary">파일 공유 / 다운로드</button><label for="share-work-file" class="share-work-secondary">받은 작업 파일 가져오기</label><input id="share-work-file" type="file" accept=".vjournal,.zip,application/zip" hidden></div><p id="share-work-status" role="status" aria-live="polite"></p></div>`;
+    modal.innerHTML = `<div class="share-work-card"><button type="button" class="share-work-close" aria-label="닫기">×</button><p class="eyebrow">작업 파일 공유</p><h2 id="share-work-title">사진과 운영현황까지 한 파일로</h2><p>저장한 월별 활동일지, 원본 PDF·한글파일, 날짜별 사진과 서명, 해당 월의 거점운영현황을 묶습니다. 받은 사람은 이 파일을 불러와 계속 편집한 다음 한글파일·엑셀·PDF로 저장할 수 있습니다.</p><label class="share-work-label">공유할 저장 작업<select id="share-work-project"></select></label><div class="share-work-actions"><button type="button" id="share-work-export" class="share-work-primary">파일 다운로드</button><label for="share-work-file" class="share-work-secondary">받은 작업 파일 가져오기</label><input id="share-work-file" type="file" accept=".vjournal,.zip,application/zip" hidden></div><p id="share-work-status" role="status" aria-live="polite"></p></div>`;
     document.body.append(modal);
     const select = modal.querySelector('#share-work-project');
     function refresh() {
