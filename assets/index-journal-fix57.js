@@ -298,7 +298,7 @@ if(pagePr){
  if(swap){pageWidth=h;pageHeight=w}else{pageWidth=w;pageHeight=h}
  let m=child(pagePr,"margin");if(m){let top=Number(m.getAttribute("top")||0)/283.465,right=Number(m.getAttribute("right")||0)/283.465,bottom=Number(m.getAttribute("bottom")||0)/283.465,left=Number(m.getAttribute("left")||0)/283.465;padding=top+"mm "+right+"mm "+bottom+"mm "+left+"mm"}
 }
-if(activityJournal){pageWidth=210;pageHeight=297;padding="15mm 18mm 0mm 18mm";}
+if(activityJournal){pageWidth=210;pageHeight=297;padding="15mm 18mm 8mm 18mm";}
 let pageStyle="<style>@page{size:"+pageWidth+"mm "+pageHeight+"mm;margin:0}.preview-page{width:"+pageWidth+"mm;height:"+pageHeight+"mm;min-height:"+pageHeight+"mm;box-sizing:border-box;padding:"+padding+";margin:16px auto;background:#fff;box-shadow:0 2px 12px #0002;overflow:visible}.preview-flow{width:100%}.preview-para{margin:0;white-space:pre-wrap;line-height:normal}.preview-table{border-collapse:collapse;table-layout:fixed;margin:0;max-width:100%;font-size:inherit}.preview-table td{box-sizing:border-box;padding:0;position:relative;vertical-align:middle;overflow-wrap:normal}.preview-table .preview-para{text-align:inherit;word-break:keep-all;overflow-wrap:normal}.preview-pic{display:inline-block;max-width:100%;height:auto;object-fit:contain;vertical-align:middle}@media print{body{background:#fff}.preview-tools{display:none}#preview-content{overflow:visible}.preview-page{margin:0;box-shadow:none;break-after:page}}</style>";
 return pageStyle+pageContents.map(content=>"<div class=\"preview-page\"><div class=\"preview-flow\">"+content+"</div></div>").join("")
 }
