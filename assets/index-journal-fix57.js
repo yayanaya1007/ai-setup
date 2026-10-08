@@ -186,6 +186,7 @@ let xml=new DOMParser().parseFromString(Lm(archive[path]),"application/xml");
 if(xml.querySelector("parsererror"))throw Error("문서 미리보기를 만들지 못했습니다.");
 let ns="http://www.hancom.co.kr/hwpml/2011/paragraph";
 let headNs="http://www.hancom.co.kr/hwpml/2011/head";
+let coreNs="http://www.hancom.co.kr/hwpml/2011/core";
 let opfNs="http://www.idpf.org/2007/opf/";
 let manifest=new Map(),opf=archive["Contents/content.hpf"];
 if(opf){let opfDoc=new DOMParser().parseFromString(Lm(opf),"application/xml");for(let item of Array.from(opfDoc.getElementsByTagNameNS(opfNs,"item")))manifest.set(item.getAttribute("id"),{path:item.getAttribute("href"),type:item.getAttribute("media-type")||"application/octet-stream"})}
@@ -224,7 +225,7 @@ let imageUrl=new Map();
 function base64(bytes){let result="";for(let offset=0;offset<bytes.length;offset+=0x8000)result+=String.fromCharCode(...bytes.subarray(offset,offset+0x8000));return btoa(result)}
 function imageSource(pic){let image=descendants(pic,"img")[0],ref=image?.getAttribute("binaryItemIDRef");if(!ref)return "";if(imageUrl.has(ref))return imageUrl.get(ref);let file=manifest.get(ref);if(!file)return "";let bytes=archive[file.path];if(!bytes)return "";let src="data:"+file.type+";base64,"+base64(bytes);imageUrl.set(ref,src);return src}
 function borderCss(fill,name){let edge=child(fill,name);if(!edge)return "none";let type=edge.getAttribute("type")||"NONE";if(type==="NONE")return "none";let width=(edge.getAttribute("width")||"0.12 mm").match(/[\d.]+/)?.[0]||"0.12";let style=type.includes("DOUBLE")?"double":type.includes("DASH")||type.includes("DOT")?"dashed":"solid";return width+"mm "+style+" "+(edge.getAttribute("color")||"#000")}
-function fillColor(fill){let brush=child(fill,"fillBrush");if(!brush)return "";let solid=descendants(brush,"solidFill",headNs)[0]||descendants(brush,"winBrush",headNs)[0];if(!solid)return "";return solid.getAttribute("faceColor")||solid.getAttribute("color")||solid.getAttribute("fillColor")||""}
+function fillColor(fill){let brush=child(fill,"fillBrush");if(!brush)return "";let solid=descendants(brush,"solidFill",coreNs)[0]||descendants(brush,"winBrush",coreNs)[0];if(!solid)return "";return solid.getAttribute("faceColor")||solid.getAttribute("color")||solid.getAttribute("fillColor")||""}
 function inline(node){
  if(node.nodeType===3)return previewEscape(node.nodeValue);
  if(node.nodeType!==1)return "";
