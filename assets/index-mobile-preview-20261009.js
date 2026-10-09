@@ -286,7 +286,7 @@ function flow(node){
  if(node.localName==="tbl")return tableHtml(node);
  if(node.localName==="p"){
 let id=node.getAttribute("paraPrIDRef"),style=paras.get(id)||"",body=Array.from(node.childNodes||[]).map(inline).join("");
-if(activityJournal){let run=child(node,"run"),charStyle=chars.get(run?.getAttribute("charPrIDRef"))||"";style=charStyle+";"+style;}if(!descendants(node,"tbl").length&&!descendants(node,"pic").length&&!descendants(node,"t").some(x=>(x.textContent||"").length))body+="<br>";
+let run=child(node,"run"),charStyle=chars.get(run?.getAttribute("charPrIDRef"))||"";style=charStyle+";"+style;if(!descendants(node,"tbl").length&&!descendants(node,"pic").length&&!descendants(node,"t").some(x=>(x.textContent||"").length))body+="<br>";
 return "<div class=\"preview-para\""+(style?" style=\""+style+"\"":"")+">"+body+"</div>"
 }
  return Array.from(node.childNodes||[]).map(flow).join("")
