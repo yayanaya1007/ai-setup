@@ -195,7 +195,7 @@ extra.remove();
 }
 }let totalHours=Number((totalMinutes/60).toFixed(1)),totalText=String(totalHours),summaryCell=ch(table,12+topActivityExtra+topTripExtra+bottomActivityExtra+bottomTripExtra,15);
 summaryCell&&sh(summaryCell,[totalText+'시간']);
-let tableSize=oh(table,'sz')[0];if(tableSize){let heightDelta=[3,4,8,9].reduce((sum,_rowIndex,index)=>sum+timeSectionHeight-sourceSectionHeights[index],0);tableSize.setAttribute('height',String(tableHeightBefore+heightDelta));}
+let tableSize=oh(table,'sz')[0];if(tableSize){let height=allRows.reduce((sum,row)=>{let cells=Array.from(row.children).filter(x=>x.localName==='tc'),single=cells.filter(cell=>Number(oh(cell,'cellSpan')[0]?.getAttribute('rowSpan')||1)===1),sizes=(single.length?single:cells).map(cell=>Number(oh(cell,'cellSz')[0]?.getAttribute('height')||0)/(single.length?1:Number(oh(cell,'cellSpan')[0]?.getAttribute('rowSpan')||1)));return sum+Math.max(0,...sizes);},0);tableSize.setAttribute('height',String(Math.round(height)));}
 oh(xml,'linesegarray').forEach(x=>x.remove());
 archive['Contents/section0.xml']=Im(new XMLSerializer().serializeToString(xml));
 archive['Preview/PrvText.txt']=Im(year+'년 '+monthNumber+'월 거점캠프 활동상황부');
