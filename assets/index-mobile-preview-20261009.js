@@ -111,38 +111,44 @@ compactCell(cell,height,count>=3?tightTimeParaId:'23');
 if(entry){fillCellLines(cell,[entry.start+'~',entry.end||'']);oh(cell,'run').forEach(run=>run.setAttribute('charPrIDRef',timeCharId(count)));}
 },
 insertTimeRows=(rowIndex,firstDay,gridUnits,entriesFor)=>{
-let rows=Array.from(table.children).filter(x=>x.localName==='tr'),firstRow=rows[rowIndex],gridRows=gridUnits.length-1;
+let rows=Array.from(table.children).filter(x=>x.localName==='tr'),firstRow=rows[rowIndex],gridRows=gridUnits.length-1,splitGridIndices=[];
 if(!firstRow)throw Error('시간 입력 칸을 찾지 못했습니다.');
 let templateRow=firstRow.cloneNode(true),originalCells=Array.from(firstRow.children).filter(x=>x.localName==='tc');
+for(let gridIndex=1;gridIndex<gridRows;gridIndex++){
+let unit=gridUnits[gridIndex],hasEntryStart=originalCells.some(cell=>{let col=Number(oh(cell,'cellAddr')[0]?.getAttribute('colAddr')||0);if(col===0)return false;let record=records.find(x=>+x.date.slice(-2)===firstDay+col-1),count=entriesFor(record).length;if(!count)return false;let entryIndex=unit/(6/count);return Number.isInteger(entryIndex)&&entryIndex>0&&entryIndex<count;});
+if(hasEntryStart)splitGridIndices.push(gridIndex);
+}
+let physicalBoundary=gridIndex=>gridIndex===0?0:1+splitGridIndices.filter(index=>index<gridIndex).length,physicalRowCount=1+splitGridIndices.length;
 for(let cell of originalCells){
 let col=Number(oh(cell,'cellAddr')[0]?.getAttribute('colAddr')||0),span=oh(cell,'cellSpan')[0],size=oh(cell,'cellSz')[0];
-if(col===0){span?.setAttribute('rowSpan',String(gridRows));size?.setAttribute('height',String(timeSectionHeight));continue;}
+if(col===0){span?.setAttribute('rowSpan',String(physicalRowCount));size?.setAttribute('height',String(timeSectionHeight));continue;}
 let record=records.find(x=>+x.date.slice(-2)===firstDay+col-1),entries=entriesFor(record),count=entries.length,perEntryRows=count?gridUnits.indexOf(6/count)-gridUnits.indexOf(0):gridRows,entryHeight=count?timeSectionHeight/count:timeSectionHeight,borderKind=col===16?'outer':'inner';
-if(count)configureTimeCell(cell,count,perEntryRows,entryHeight,entries[0],true,borderKind);
-else{span?.setAttribute('rowSpan',String(gridRows));size?.setAttribute('height',String(timeSectionHeight));}
+if(count){perEntryRows=physicalBoundary(gridUnits.indexOf(6/count))-physicalBoundary(0);configureTimeCell(cell,count,perEntryRows,entryHeight,entries[0],true,borderKind);}
+else{span?.setAttribute('rowSpan',String(physicalRowCount));size?.setAttribute('height',String(timeSectionHeight));}
 }
 let anchor=firstRow;
-for(let gridIndex=1;gridIndex<gridRows;gridIndex++){
+for(let gridIndex of splitGridIndices){
 let newRow=templateRow.cloneNode(true),newCells=[],unit=gridUnits[gridIndex];
 for(let sourceCell of originalCells){
 let col=Number(oh(sourceCell,'cellAddr')[0]?.getAttribute('colAddr')||0);if(col===0)continue;
 let record=records.find(x=>+x.date.slice(-2)===firstDay+col-1),entries=entriesFor(record),count=entries.length;if(!count)continue;
 let entryIndex=unit/(6/count);if(!Number.isInteger(entryIndex)||entryIndex<=0||entryIndex>=count)continue;
-let entryEndRow=gridUnits.indexOf((entryIndex+1)*6/count),perEntryRows=entryEndRow-gridIndex,copy=sourceCell.cloneNode(true),addr=oh(copy,'cellAddr')[0],borderKind=col===16?'outer':'inner';
-addr?.setAttribute('rowAddr',String(rowIndex+gridIndex));configureTimeCell(copy,count,perEntryRows,timeSectionHeight/count,entries[entryIndex],false,borderKind);newCells.push(copy);
+let entryEndRow=gridUnits.indexOf((entryIndex+1)*6/count),perEntryRows=physicalBoundary(entryEndRow)-physicalBoundary(gridIndex),copy=sourceCell.cloneNode(true),addr=oh(copy,'cellAddr')[0],borderKind=col===16?'outer':'inner';
+addr?.setAttribute('rowAddr',String(rowIndex+physicalBoundary(gridIndex)));configureTimeCell(copy,count,perEntryRows,timeSectionHeight/count,entries[entryIndex],false,borderKind);newCells.push(copy);
 }
 newCells.sort((x,y)=>Number(oh(x,'cellAddr')[0]?.getAttribute('colAddr')||0)-Number(oh(y,'cellAddr')[0]?.getAttribute('colAddr')||0));
+if(!newCells.length)continue;
 newRow.replaceChildren(...newCells);newRow.querySelectorAll('tbl').forEach(x=>x.remove());anchor.parentNode.insertBefore(newRow,anchor.nextSibling);anchor=newRow;
 }
+return splitGridIndices.length;
 };
-let topActivityExtra=topActivityGridRows-1;
+let extraRowsFor=(firstDay,gridUnits,entriesFor)=>{let splitGridIndices=new Set(),gridRows=gridUnits.length-1;for(let gridIndex=1;gridIndex<gridRows;gridIndex++){let unit=gridUnits[gridIndex],hasEntryStart=records.some(record=>{let day=+record.date.slice(-2);if(day<firstDay||day>=firstDay+16)return false;let count=entriesFor(record).length;if(!count)return false;let entryIndex=unit/(6/count);return Number.isInteger(entryIndex)&&entryIndex>0&&entryIndex<count;});if(hasEntryStart)splitGridIndices.add(gridIndex);}return splitGridIndices.size;};
+let topActivityExtra=extraRowsFor(1,topActivityGrid,activityTimesFor),bottomActivityExtra=extraRowsFor(17,bottomActivityGrid,activityTimesFor),topTripExtra=extraRowsFor(1,topTripGrid,tripsFor),bottomTripExtra=extraRowsFor(17,bottomTripGrid,tripsFor);
 insertTimeRows(3,1,topActivityGrid,activityTimesFor);
 let bottomActivityBase=8+topActivityExtra;insertTimeRows(bottomActivityBase,17,bottomActivityGrid,activityTimesFor);
-let bottomActivityExtra=bottomActivityGridRows-1,
-topTripBase=4+topActivityExtra,bottomTripBase=9+topActivityExtra+bottomActivityExtra;
+let topTripBase=4+topActivityExtra,bottomTripBase=9+topActivityExtra+bottomActivityExtra;
 insertTimeRows(bottomTripBase,17,bottomTripGrid,tripsFor);
 insertTimeRows(topTripBase,1,topTripGrid,tripsFor);
-let topTripExtra=topTripGridRows-1,bottomTripExtra=bottomTripGridRows-1;
 let allRows=Array.from(table.children).filter(x=>x.localName==='tr');
 table.setAttribute('rowCnt',String(allRows.length));
 allRows.forEach((row,rowIndex)=>Array.from(row.children).filter(x=>x.localName==='tc').forEach(cell=>oh(cell,'cellAddr')[0]?.setAttribute('rowAddr',String(rowIndex))));
