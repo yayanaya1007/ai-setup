@@ -74,7 +74,10 @@ let hasTopSecond=records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<1
 let hasBottomSecond=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&x.start2&&x.end2;});
 let tripsFor=record=>record?.trips.filter(x=>x.start)||[],
 topTripRowCount=Math.max(1,...records.filter(x=>{let day=+x.date.slice(-2);return day>=1&&day<17;}).map(x=>tripsFor(x).length)),
-bottomTripRowCount=Math.max(1,...records.filter(x=>{let day=+x.date.slice(-2);return day>=17&&day<33;}).map(x=>tripsFor(x).length));
+bottomTripRowCount=Math.max(1,...records.filter(x=>{let day=+x.date.slice(-2);return day>=17&&day<33;}).map(x=>tripsFor(x).length)),
+hasTopOverlap=records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<17&&x.start2&&x.end2&&tripsFor(x).length>=2;}),
+hasBottomOverlap=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&x.start2&&x.end2&&tripsFor(x).length>=2;}),
+overlapCellHeight=4110,smallTimeCharId='17';
 let splitBorders;
 if(hasTopSecond||hasBottomSecond){
 let headNs='http://www.hancom.co.kr/hwpml/2011/head',headerDoc=new DOMParser().parseFromString(Lm(archive['Contents/header.xml']),'application/xml'),borderList=headerDoc.getElementsByTagNameNS(headNs,'borderFills')[0];
@@ -84,34 +87,35 @@ let makeBorder=(baseId,topType,bottomType)=>{let base=Array.from(borderList.chil
 splitBorders={first:{inner:makeBorder(13,'DOUBLE_SLIM','NONE'),outer:makeBorder(15,'DOUBLE_SLIM','NONE')},second:{inner:makeBorder(13,'SOLID','SOLID'),outer:makeBorder(15,'SOLID','SOLID')}};
 archive['Contents/header.xml']=Im(new XMLSerializer().serializeToString(headerDoc));
 }
-let insertActivityRow=(rowIndex,firstDay)=>{
-let rows=Array.from(table.children).filter(x=>x.localName==='tr'),firstRow=rows[rowIndex];
+let insertActivityRow=(rowIndex,firstDay,hasOverlap)=>{
+let rows=Array.from(table.children).filter(x=>x.localName==='tr'),firstRow=rows[rowIndex],
+splitHeight=hasOverlap?overlapCellHeight:halfActivityHeight;
 if(!firstRow)throw Error('활동시간 칸을 찾지 못했습니다.');
 let newRow=firstRow.cloneNode(true),secondCells=[];
 for(let cell of Array.from(firstRow.children).filter(x=>x.localName==='tc')){
 let addr=oh(cell,'cellAddr')[0],col=Number(addr?.getAttribute('colAddr')||0),span=oh(cell,'cellSpan')[0],size=oh(cell,'cellSz')[0];
-if(col===0){span?.setAttribute('rowSpan','2');size?.setAttribute('height',String(activityHeight));continue;}
+if(col===0){span?.setAttribute('rowSpan','2');size?.setAttribute('height',String(splitHeight*2));continue;}
 let rec=records.find(x=>+x.date.slice(-2)===firstDay+col-1);
 if(rec?.start2&&rec?.end2){
-span?.setAttribute('rowSpan','1');size?.setAttribute('height',String(halfActivityHeight));
+span?.setAttribute('rowSpan','1');size?.setAttribute('height',String(splitHeight));
 let second=cell.cloneNode(true),secondAddr=oh(second,'cellAddr')[0],secondSpan=oh(second,'cellSpan')[0],secondSize=oh(second,'cellSz')[0],borderKind=col===16?'outer':'inner';
 cell.setAttribute('borderFillIDRef',splitBorders.first[borderKind]);second.setAttribute('borderFillIDRef',splitBorders.second[borderKind]);
-secondAddr?.setAttribute('rowAddr',String(rowIndex+1));secondSpan?.setAttribute('rowSpan','1');secondSize?.setAttribute('height',String(halfActivityHeight));
+secondAddr?.setAttribute('rowAddr',String(rowIndex+1));secondSpan?.setAttribute('rowSpan','1');secondSize?.setAttribute('height',String(splitHeight));
 fillCellLines(second,[rec.start2+'~',rec.end2]);secondCells.push(second);
-}else{span?.setAttribute('rowSpan','2');size?.setAttribute('height',String(activityHeight));}
+}else{span?.setAttribute('rowSpan','2');size?.setAttribute('height',String(splitHeight*2));}
 }
 secondCells.sort((x,y)=>Number(oh(x,'cellAddr')[0]?.getAttribute('colAddr')||0)-Number(oh(y,'cellAddr')[0]?.getAttribute('colAddr')||0));
 newRow.replaceChildren(...secondCells);
 newRow.querySelectorAll('tbl').forEach(x=>x.remove());
 firstRow.parentNode.insertBefore(newRow,firstRow.nextSibling);
-let tableSize=oh(table,'sz')[0];tableSize?.setAttribute('height',String(Number(tableSize.getAttribute('height')||0)+halfActivityHeight));
+let tableSize=oh(table,'sz')[0];tableSize?.setAttribute('height',String(Number(tableSize.getAttribute('height')||0)+splitHeight));
 };
-if(hasTopSecond)insertActivityRow(3,1);
-if(hasBottomSecond)insertActivityRow(8+(hasTopSecond?1:0),17);
+if(hasTopSecond)insertActivityRow(3,1,hasTopOverlap);
+if(hasBottomSecond)insertActivityRow(8+(hasTopSecond?1:0),17,hasBottomOverlap);
 let topActivityExtra=hasTopSecond?1:0,bottomActivityExtra=hasBottomSecond?1:0,
 topTripBase=4+topActivityExtra,bottomTripBase=9+topActivityExtra+bottomActivityExtra,
-tripHeight=2835;
-let insertTripRows=(rowIndex,firstDay,maxRows)=>{
+topTripHeight=hasTopOverlap?overlapCellHeight:2835,bottomTripHeight=hasBottomOverlap?overlapCellHeight:2835;
+let insertTripRows=(rowIndex,firstDay,maxRows,tripHeight)=>{
 if(maxRows<=1)return;
 let rows=Array.from(table.children).filter(x=>x.localName==='tr'),firstRow=rows[rowIndex];
 if(!firstRow)throw Error('출장시간 칸을 찾지 못했습니다.');
@@ -137,31 +141,33 @@ row.replaceChildren(...cells);row.querySelectorAll('tbl').forEach(x=>x.remove())
 let anchor=firstRow;
 for(let row of newRows){anchor.parentNode.insertBefore(row,anchor.nextSibling);anchor=row;}
 };
-insertTripRows(bottomTripBase,17,bottomTripRowCount);
-insertTripRows(topTripBase,1,topTripRowCount);
+insertTripRows(bottomTripBase,17,bottomTripRowCount,bottomTripHeight);
+insertTripRows(topTripBase,1,topTripRowCount,topTripHeight);
 let topTripExtra=topTripRowCount-1,bottomTripExtra=bottomTripRowCount-1;
 let allRows=Array.from(table.children).filter(x=>x.localName==='tr');
 table.setAttribute('rowCnt',String(allRows.length));
 allRows.forEach((row,rowIndex)=>Array.from(row.children).filter(x=>x.localName==='tc').forEach(cell=>oh(cell,'cellAddr')[0]?.setAttribute('rowAddr',String(rowIndex))));
 let totalMinutes=0;
-for(let [dateRow,firstDay,activityRow,tripRow,tripRowCount] of [[2,1,3,topTripBase,topTripRowCount],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomTripRowCount]]){
+for(let [dateRow,firstDay,activityRow,tripRow,tripRowCount,tripHeight,sectionHasOverlap] of [[2,1,3,topTripBase,topTripRowCount,topTripHeight,hasTopOverlap],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomTripRowCount,bottomTripHeight,hasBottomOverlap]]){
 let sectionHasSecond=firstDay===1?hasTopSecond:hasBottomSecond,
-baseActivityHeight=activityHeight;
-compactCell(ch(table,activityRow,0),sectionHasSecond?activityHeight:baseActivityHeight);
+activityCellHeight=sectionHasOverlap?overlapCellHeight:halfActivityHeight;
+compactCell(ch(table,activityRow,0),sectionHasSecond?activityCellHeight*2:activityHeight);
 compactCell(ch(table,tripRow,0),tripHeight*tripRowCount);
 for(let i=0;i<16;i++){
 let day=firstDay+i,col=i+1,dateCell=ch(table,dateRow,col),activityCell=ch(table,activityRow,col),
 validDay=day<=daysInMonth,record=validDay?records.find(x=>+x.date.slice(-2)===day):undefined;
 if(dateCell)sh(dateCell,[validDay?String(day):'']);
 if(activityCell){
-let hasSecondActivity=!!(record?.start2&&record?.end2),split=hasSecondActivity,height=sectionHasSecond?(split?halfActivityHeight:activityHeight):activityHeight;
+let hasSecondActivity=!!(record?.start2&&record?.end2),split=hasSecondActivity,height=sectionHasSecond?(split?activityCellHeight:activityCellHeight*2):activityHeight,
+overlapDate=!!(sectionHasOverlap&&hasSecondActivity&&tripsFor(record).length>=2);
 compactCell(activityCell,height);
 if(record){
 let minutes=recordMinutes(record);
 if(minutes===null)throw Error(day+'일 시작·종료 시간을 확인해 주세요.');
 totalMinutes+=minutes;
 fillCellLines(activityCell,[record.start+'~',record.end]);
-if(split){let secondCell=ch(table,activityRow+1,col);if(!secondCell)throw Error(day+'일 두 번째 활동시간 칸을 찾지 못했습니다.');compactCell(secondCell,halfActivityHeight);fillCellLines(secondCell,[record.start2+'~',record.end2]);}
+if(overlapDate)oh(activityCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));
+if(split){let secondCell=ch(table,activityRow+1,col);if(!secondCell)throw Error(day+'일 두 번째 활동시간 칸을 찾지 못했습니다.');compactCell(secondCell,activityCellHeight);fillCellLines(secondCell,[record.start2+'~',record.end2]);if(overlapDate)oh(secondCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));}
 }else fillCellLines(activityCell,validDay?['00:00~','00:00']:['','']);
 }
 let trips=tripsFor(record);
@@ -171,7 +177,7 @@ if(!tripCell)continue;
 let sub=oh(tripCell,'subList')[0],sourceSub=oh(activityCell,'subList')[0],targetSub=sub;
 if(sourceSub&&targetSub){let sourceParagraphs=Array.from(sourceSub.children).filter(x=>x.localName==='p');Array.from(targetSub.children).filter(x=>x.localName==='p').forEach(x=>x.remove());sourceParagraphs.forEach(x=>targetSub.appendChild(x.cloneNode(true)))}
 compactCell(tripCell,tripHeight);sub&&sub.setAttribute('lineWrap','SQUEEZE');sub&&sub.setAttribute('vertAlign','TOP');
-let trip=trips[tripIndex];fillCellLines(tripCell,trip?[trip.start+'~',trip.end||'']:['','']);
+let trip=trips[tripIndex];fillCellLines(tripCell,trip?[trip.start+'~',trip.end||'']:['','']);if(overlapDate)oh(tripCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));
 }
 let hoursCell=ch(table,tripRow+tripRowCount,col);
 if(hoursCell){let minutes=record?recordMinutes(record):null;sh(hoursCell,includeDailyHours&&minutes!==null?[String(Number((minutes/60).toFixed(1)))]:['']);}
