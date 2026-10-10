@@ -78,7 +78,9 @@ let hasBottomSecond=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&d
 let tripsFor=record=>record?.trips.filter(x=>x.start)||[],
 hasTopOverlap=records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<17&&x.start&&x.end&&x.start2&&x.end2&&tripsFor(x).length>=2;}),
 hasBottomOverlap=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&x.start&&x.end&&x.start2&&x.end2&&tripsFor(x).length>=2;}),
-overlapEntryHeight=2055,smallTimeCharId='17',
+hasTopTripTriple=records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<17&&tripsFor(x).length>=3;}),
+hasBottomTripTriple=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&tripsFor(x).length>=3;}),
+overlapEntryHeight=2055,tripleTripEntryHeight=1370,smallTimeCharId='17',smallTripCharId='11',
 topTripRowCount=Math.max(1,...records.filter(x=>{let day=+x.date.slice(-2);return day>=1&&day<17;}).map(x=>tripsFor(x).length)),
 bottomTripRowCount=Math.max(1,...records.filter(x=>{let day=+x.date.slice(-2);return day>=17&&day<33;}).map(x=>tripsFor(x).length));
 let splitBorders;
@@ -117,7 +119,7 @@ if(hasTopSecond)insertActivityRow(3,1);
 if(hasBottomSecond)insertActivityRow(8+(hasTopSecond?1:0),17);
 let topActivityExtra=hasTopSecond?1:0,bottomActivityExtra=hasBottomSecond?1:0,
 topTripBase=4+topActivityExtra,bottomTripBase=9+topActivityExtra+bottomActivityExtra,
-topTripHeight=hasTopOverlap?overlapEntryHeight:2835,bottomTripHeight=hasBottomOverlap?overlapEntryHeight:2835;
+topTripHeight=hasTopTripTriple?tripleTripEntryHeight:(hasTopOverlap?overlapEntryHeight:2835),bottomTripHeight=hasBottomTripTriple?tripleTripEntryHeight:(hasBottomOverlap?overlapEntryHeight:2835);
 let insertTripRows=(rowIndex,firstDay,maxRows,rowHeight)=>{
 if(maxRows<=1)return;
 let rows=Array.from(table.children).filter(x=>x.localName==='tr'),firstRow=rows[rowIndex];
@@ -151,7 +153,7 @@ let allRows=Array.from(table.children).filter(x=>x.localName==='tr');
 table.setAttribute('rowCnt',String(allRows.length));
 allRows.forEach((row,rowIndex)=>Array.from(row.children).filter(x=>x.localName==='tc').forEach(cell=>oh(cell,'cellAddr')[0]?.setAttribute('rowAddr',String(rowIndex))));
 let totalMinutes=0;
-for(let [dateRow,firstDay,activityRow,tripRow,tripRowCount,sectionTripHeight,sectionHasOverlap] of [[2,1,3,topTripBase,topTripRowCount,topTripHeight,hasTopOverlap],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomTripRowCount,bottomTripHeight,hasBottomOverlap]]){
+for(let [dateRow,firstDay,activityRow,tripRow,tripRowCount,sectionTripHeight,sectionHasOverlap,sectionHasTripTriple] of [[2,1,3,topTripBase,topTripRowCount,topTripHeight,hasTopOverlap,hasTopTripTriple],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomTripRowCount,bottomTripHeight,hasBottomOverlap,hasBottomTripTriple]]){
 let sectionHasSecond=firstDay===1?hasTopSecond:hasBottomSecond,
 baseActivityHeight=activityHeight;
 compactCell(ch(table,activityRow,0),sectionHasOverlap?overlapEntryHeight*2:(sectionHasSecond?activityHeight:baseActivityHeight));
@@ -180,7 +182,7 @@ if(!tripCell)continue;
 let sub=oh(tripCell,'subList')[0],sourceSub=oh(activityCell,'subList')[0],targetSub=sub;
 if(sourceSub&&targetSub){let sourceParagraphs=Array.from(sourceSub.children).filter(x=>x.localName==='p');Array.from(targetSub.children).filter(x=>x.localName==='p').forEach(x=>x.remove());sourceParagraphs.forEach(x=>targetSub.appendChild(x.cloneNode(true)))}
 compactCell(tripCell,sectionTripHeight);sub&&sub.setAttribute('lineWrap','SQUEEZE');sub&&sub.setAttribute('vertAlign','TOP');
-let trip=trips[tripIndex];fillCellLines(tripCell,trip?[trip.start+'~',trip.end||'']:['','']);if(overlapDate)oh(tripCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));
+let trip=trips[tripIndex];fillCellLines(tripCell,trip?[trip.start+'~',trip.end||'']:['','']);if(sectionHasTripTriple)oh(tripCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTripCharId));else if(overlapDate)oh(tripCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));
 }
 let hoursCell=ch(table,tripRow+tripRowCount,col);
 if(hoursCell){let minutes=record?recordMinutes(record):null;sh(hoursCell,includeDailyHours&&minutes!==null?[String(Number((minutes/60).toFixed(1)))]:['']);}
