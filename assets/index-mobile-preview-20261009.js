@@ -132,7 +132,7 @@ if(split){let secondCell=ch(table,activityRow+1,col);if(!secondCell)throw Error(
 }
 if(tripCell){
 let trips=record?.trips.filter(x=>x.start)||[],sub=oh(tripCell,'subList')[0];
-compactCell(tripCell,tripHeight);sub&&sub.setAttribute('lineWrap','SQUEEZE');sub&&sub.setAttribute('vertAlign','TOP');
+let sourceSub=oh(activityCell,'subList')[0],targetSub=oh(tripCell,'subList')[0];if(sourceSub&&targetSub){let sourceParagraphs=Array.from(sourceSub.children).filter(x=>x.localName==='p');Array.from(targetSub.children).filter(x=>x.localName==='p').forEach(x=>x.remove());sourceParagraphs.forEach(x=>targetSub.appendChild(x.cloneNode(true)))}let tripCellSize=oh(tripCell,'cellSz')[0];tripCellSize&&tripCellSize.setAttribute('height',String(tripHeight));sub&&sub.setAttribute('lineWrap','SQUEEZE');sub&&sub.setAttribute('vertAlign','TOP');
 fillCellLines(tripCell,trips.length?[trips.map(x=>x.start+'~').join(', '),trips.map(x=>x.end||'').join(', ')]:['','']);
 }
 let hoursCell=ch(table,tripRow+1,col);
