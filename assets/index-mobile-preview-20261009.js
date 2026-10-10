@@ -184,10 +184,10 @@ let trip=trips[tripIndex];fillCellLines(tripCell,[trip.start+'~',trip.end||'']);
 }
 let blankTripCell=ch(table,tripRow,col);if(!tripCount&&blankTripCell){compactCell(blankTripCell,timeSectionHeight);let sub=oh(blankTripCell,'subList')[0],margin=oh(blankTripCell,'cellMargin')[0];sub?.setAttribute('vertAlign','CENTER');if(margin){margin.setAttribute('top','0');margin.setAttribute('bottom','0');}fillCellLines(blankTripCell,['','']);}
 let hoursCell=ch(table,tripRow+tripRows,col);
-if(hoursCell){setFormulaResult(hoursCell,'');sh(hoursCell,['']);}
+if(hoursCell){setFormulaResult(hoursCell,'');let dailyMinutes=includeDailyHours&&record?recordMinutes(record):null;fillCellLines(hoursCell,dailyMinutes===null?['']:[String(Number((dailyMinutes/60).toFixed(1)))]);}
 }
 }
-if(includeDailyHours){let sumRange=(start,end)=>records.reduce((sum,record)=>{let day=+record.date.slice(-2);if(day<start||day>end)return sum;let minutes=recordMinutes(record);return minutes===null?sum:sum+minutes;},0),showHours=minutes=>String(Number((minutes/60).toFixed(1))),topHoursRow=5+topActivityExtra+topTripExtra,bottomHoursRow=10+topActivityExtra+topTripExtra+bottomActivityExtra+bottomTripExtra,day16=records.find(record=>+record.date.slice(-2)===16),topLast=ch(table,topHoursRow,16),topTotalCell;if(day16){topTotalCell=ch(table,topHoursRow,17);}else if(topLast){let next=ch(table,topHoursRow,17),span=oh(topLast,'cellSpan')[0],size=oh(topLast,'cellSz')[0],nextSize=next&&oh(next,'cellSz')[0];if(next&&span&&size&&nextSize){span.setAttribute('colSpan','2');size.setAttribute('width',String(Number(size.getAttribute('width')||0)+Number(nextSize.getAttribute('width')||0)));topLast.setAttribute('borderFillIDRef',next.getAttribute('borderFillIDRef')||topLast.getAttribute('borderFillIDRef'));next.remove();}topTotalCell=topLast;}if(topTotalCell){setFormulaResult(topTotalCell,'');sh(topTotalCell,['']);}let bottomTotalCell=ch(table,bottomHoursRow,16);if(bottomTotalCell){setFormulaResult(bottomTotalCell,'');sh(bottomTotalCell,['']);}}else{
+if(includeDailyHours){let topHoursRow=5+topActivityExtra+topTripExtra,topExtra=ch(table,topHoursRow,17);if(topExtra){setFormulaResult(topExtra,'');sh(topExtra,['']);}}else{
 let topRow=5+topActivityExtra+topTripExtra,bottomRow=10+topActivityExtra+topTripExtra+bottomActivityExtra+bottomTripExtra,last=ch(table,topRow,16),extra=ch(table,topRow,17);
 for(let cell of [last,extra,ch(table,bottomRow,16)])if(cell){for(let control of oh(cell,'ctrl'))control.remove();sh(cell,[]);}
 if(last&&extra){
