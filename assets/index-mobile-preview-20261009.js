@@ -57,7 +57,7 @@ let xml=new DOMParser().parseFromString(Lm(section),'application/xml');
 if(xml.querySelector('parsererror'))throw Error('출근부 서식 파일을 읽지 못했습니다.');
 let table=oh(xml,'tbl')[0];
 if(!table)throw Error('출근부 서식의 표를 찾지 못했습니다.');
-let pagePr=oh(xml,'pagePr')[0],pageMargin=pagePr&&oh(pagePr,'margin')[0];if(pagePr){pagePr.setAttribute('landscape','NARROWLY');pagePr.setAttribute('width','59528');pagePr.setAttribute('height','84186');}if(pageMargin)for(let [key,value] of Object.entries({top:5669,left:8504,right:2835,bottom:0,header:0,footer:4252,gutter:0}))pageMargin.setAttribute(key,String(value));
+let pagePr=oh(xml,'pagePr')[0],pageMargin=pagePr&&oh(pagePr,'margin')[0];if(pagePr){pagePr.setAttribute('landscape','WIDE');pagePr.setAttribute('width','84186');pagePr.setAttribute('height','59528');}if(pageMargin)for(let [key,value] of Object.entries({top:0,left:8504,right:2835,bottom:0,header:0,footer:0,gutter:0}))pageMargin.setAttribute(key,String(value));
 let activityHeight=5386,halfActivityHeight=2693;
 let month=e.month,year=+month.slice(0,4),monthNumber=+month.slice(5),daysInMonth=new Date(year,monthNumber,0).getDate(),
 records=e.records.filter(x=>x.date.startsWith(month+'-')&&x.name.trim()===e.name.trim()),
@@ -78,6 +78,7 @@ bottomTripRowCount=Math.max(1,...records.filter(x=>{let day=+x.date.slice(-2);re
 hasTopOverlap=records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<17&&x.start2&&x.end2&&tripsFor(x).length>=2;}),
 hasBottomOverlap=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&x.start2&&x.end2&&tripsFor(x).length>=2;}),
 overlapCellHeight=4110,smallTimeCharId='17';
+if(hasTopOverlap||hasBottomOverlap){let rows=Array.from(table.children).filter(x=>x.localName==='tr');for(let [rowIndex,height] of [[0,2550],[2,2000],[5,2000],[6,2000],[7,2000],[10,2000],[11,2000],[12,1800]]){let row=rows[rowIndex];if(row)Array.from(row.children).filter(x=>x.localName==='tc').forEach(cell=>compactCell(cell,height));}}
 let splitBorders;
 if(hasTopSecond||hasBottomSecond){
 let headNs='http://www.hancom.co.kr/hwpml/2011/head',headerDoc=new DOMParser().parseFromString(Lm(archive['Contents/header.xml']),'application/xml'),borderList=headerDoc.getElementsByTagNameNS(headNs,'borderFills')[0];
@@ -155,11 +156,11 @@ compactCell(ch(table,activityRow,0),sectionHasSecond?activityCellHeight*2:activi
 compactCell(ch(table,tripRow,0),tripHeight*tripRowCount);
 for(let i=0;i<16;i++){
 let day=firstDay+i,col=i+1,dateCell=ch(table,dateRow,col),activityCell=ch(table,activityRow,col),
-validDay=day<=daysInMonth,record=validDay?records.find(x=>+x.date.slice(-2)===day):undefined;
+validDay=day<=daysInMonth,record=validDay?records.find(x=>+x.date.slice(-2)===day):undefined,
+hasSecondActivity=!!(record?.start2&&record?.end2),overlapDate=!!(sectionHasOverlap&&hasSecondActivity&&tripsFor(record).length>=2);
 if(dateCell)sh(dateCell,[validDay?String(day):'']);
 if(activityCell){
-let hasSecondActivity=!!(record?.start2&&record?.end2),split=hasSecondActivity,height=sectionHasSecond?(split?activityCellHeight:activityCellHeight*2):activityHeight,
-overlapDate=!!(sectionHasOverlap&&hasSecondActivity&&tripsFor(record).length>=2);
+let split=hasSecondActivity,height=sectionHasSecond?(split?activityCellHeight:activityCellHeight*2):activityHeight;
 compactCell(activityCell,height);
 if(record){
 let minutes=recordMinutes(record);
