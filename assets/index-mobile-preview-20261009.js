@@ -153,7 +153,7 @@ let allRows=Array.from(table.children).filter(x=>x.localName==='tr');
 table.setAttribute('rowCnt',String(allRows.length));
 allRows.forEach((row,rowIndex)=>Array.from(row.children).filter(x=>x.localName==='tc').forEach(cell=>oh(cell,'cellAddr')[0]?.setAttribute('rowAddr',String(rowIndex))));
 let totalMinutes=0;
-for(let [dateRow,firstDay,activityRow,tripRow,activityGrid,tripGrid] of [[2,1,3,topTripBase,topActivityGrid,topTripGrid],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomActivityGrid,bottomTripGrid]]){
+for(let [dateRow,firstDay,activityRow,tripRow,activityGrid,tripGrid,activityPhysicalRows] of [[2,1,3,topTripBase,topActivityGrid,topTripGrid,1+topActivityExtra],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomActivityGrid,bottomTripGrid,1+bottomActivityExtra]]){
 let activityRows=activityGrid.length-1,tripRows=tripGrid.length-1;
 compactCell(ch(table,activityRow,0),timeSectionHeight);
 compactCell(ch(table,tripRow,0),timeSectionHeight);
@@ -163,7 +163,7 @@ validDay=day<=daysInMonth,record=validDay?records.find(x=>+x.date.slice(-2)===da
 if(dateCell)sh(dateCell,[validDay?String(day):'']);
 let activityTimes=activityTimesFor(record),activityTimeCount=activityTimes.length;
 if(activityCell){
-let activitySpan=activityTimeCount?activityGrid.indexOf(6/activityTimeCount)-activityGrid.indexOf(0):activityRows;
+let activitySpan=activityTimeCount?activityGrid.indexOf(6/activityTimeCount)-activityGrid.indexOf(0):activityPhysicalRows;
 oh(activityCell,'cellSpan')[0]?.setAttribute('rowSpan',String(activitySpan));
 compactCell(activityCell,activityTimeCount?timeSectionHeight/activityTimeCount:timeSectionHeight,activityTimeCount>=3?tightTimeParaId:'23');
 let activitySub=oh(activityCell,'subList')[0];activitySub?.setAttribute('vertAlign','CENTER');
