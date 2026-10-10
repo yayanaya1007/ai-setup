@@ -78,7 +78,7 @@ let hasBottomSecond=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&d
 let tripsFor=record=>record?.trips.filter(x=>x.start)||[],
 hasTopOverlap=records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<17&&x.start&&x.end&&x.start2&&x.end2&&tripsFor(x).length>=2;}),
 hasBottomOverlap=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&x.start&&x.end&&x.start2&&x.end2&&tripsFor(x).length>=2;}),
-overlapCellHeight=4110,smallTimeCharId='17',
+overlapEntryHeight=2055,smallTimeCharId='17',
 topTripRowCount=Math.max(1,...records.filter(x=>{let day=+x.date.slice(-2);return day>=1&&day<17;}).map(x=>tripsFor(x).length)),
 bottomTripRowCount=Math.max(1,...records.filter(x=>{let day=+x.date.slice(-2);return day>=17&&day<33;}).map(x=>tripsFor(x).length));
 let splitBorders;
@@ -99,7 +99,7 @@ let addr=oh(cell,'cellAddr')[0],col=Number(addr?.getAttribute('colAddr')||0),spa
 if(col===0){span?.setAttribute('rowSpan','2');size?.setAttribute('height',String(activityHeight));continue;}
 let rec=records.find(x=>+x.date.slice(-2)===firstDay+col-1);
 if(rec?.start2&&rec?.end2){
-let overlap=!!(rec.start&&rec.end&&tripsFor(rec).length>=2),splitHeight=overlap?overlapCellHeight:halfActivityHeight;
+let overlap=!!(rec.start&&rec.end&&tripsFor(rec).length>=2),splitHeight=overlap?overlapEntryHeight:halfActivityHeight;
 span?.setAttribute('rowSpan','1');size?.setAttribute('height',String(splitHeight));
 let second=cell.cloneNode(true),secondAddr=oh(second,'cellAddr')[0],secondSpan=oh(second,'cellSpan')[0],secondSize=oh(second,'cellSz')[0],borderKind=col===16?'outer':'inner';
 cell.setAttribute('borderFillIDRef',splitBorders.first[borderKind]);second.setAttribute('borderFillIDRef',splitBorders.second[borderKind]);
@@ -117,7 +117,7 @@ if(hasTopSecond)insertActivityRow(3,1);
 if(hasBottomSecond)insertActivityRow(8+(hasTopSecond?1:0),17);
 let topActivityExtra=hasTopSecond?1:0,bottomActivityExtra=hasBottomSecond?1:0,
 topTripBase=4+topActivityExtra,bottomTripBase=9+topActivityExtra+bottomActivityExtra,
-topTripHeight=hasTopOverlap?overlapCellHeight:2835,bottomTripHeight=hasBottomOverlap?overlapCellHeight:2835;
+topTripHeight=hasTopOverlap?overlapEntryHeight:2835,bottomTripHeight=hasBottomOverlap?overlapEntryHeight:2835;
 let insertTripRows=(rowIndex,firstDay,maxRows,rowHeight)=>{
 if(maxRows<=1)return;
 let rows=Array.from(table.children).filter(x=>x.localName==='tr'),firstRow=rows[rowIndex];
@@ -154,7 +154,7 @@ let totalMinutes=0;
 for(let [dateRow,firstDay,activityRow,tripRow,tripRowCount,sectionTripHeight,sectionHasOverlap] of [[2,1,3,topTripBase,topTripRowCount,topTripHeight,hasTopOverlap],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomTripRowCount,bottomTripHeight,hasBottomOverlap]]){
 let sectionHasSecond=firstDay===1?hasTopSecond:hasBottomSecond,
 baseActivityHeight=activityHeight;
-compactCell(ch(table,activityRow,0),sectionHasOverlap?overlapCellHeight*2:(sectionHasSecond?activityHeight:baseActivityHeight));
+compactCell(ch(table,activityRow,0),sectionHasOverlap?overlapEntryHeight*2:(sectionHasSecond?activityHeight:baseActivityHeight));
 compactCell(ch(table,tripRow,0),sectionTripHeight*tripRowCount);
 for(let i=0;i<16;i++){
 let day=firstDay+i,col=i+1,dateCell=ch(table,dateRow,col),activityCell=ch(table,activityRow,col),
@@ -162,7 +162,7 @@ validDay=day<=daysInMonth,record=validDay?records.find(x=>+x.date.slice(-2)===da
 if(dateCell)sh(dateCell,[validDay?String(day):'']);
 let hasSecondActivity=!!(record?.start2&&record?.end2),overlapDate=!!(sectionHasOverlap&&hasSecondActivity&&tripsFor(record).length>=2);
 if(activityCell){
-let split=hasSecondActivity,height=sectionHasSecond?(split?(overlapDate?overlapCellHeight:halfActivityHeight):activityHeight):activityHeight;
+let split=hasSecondActivity,height=sectionHasSecond?(split?(overlapDate?overlapEntryHeight:halfActivityHeight):activityHeight):activityHeight;
 compactCell(activityCell,height);
 if(record){
 let minutes=recordMinutes(record);
@@ -170,7 +170,7 @@ if(minutes===null)throw Error(day+'일 시작·종료 시간을 확인해 주세
 totalMinutes+=minutes;
 fillCellLines(activityCell,[record.start+'~',record.end]);
 if(overlapDate)oh(activityCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));
-if(split){let secondCell=ch(table,activityRow+1,col);if(!secondCell)throw Error(day+'일 두 번째 활동시간 칸을 찾지 못했습니다.');compactCell(secondCell,overlapDate?overlapCellHeight:halfActivityHeight);fillCellLines(secondCell,[record.start2+'~',record.end2]);if(overlapDate)oh(secondCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));}
+if(split){let secondCell=ch(table,activityRow+1,col);if(!secondCell)throw Error(day+'일 두 번째 활동시간 칸을 찾지 못했습니다.');compactCell(secondCell,overlapDate?overlapEntryHeight:halfActivityHeight);fillCellLines(secondCell,[record.start2+'~',record.end2]);if(overlapDate)oh(secondCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));}
 }else fillCellLines(activityCell,validDay?['00:00~','00:00']:['','']);
 }
 let trips=tripsFor(record);
