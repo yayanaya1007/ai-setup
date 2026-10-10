@@ -57,7 +57,7 @@ let xml=new DOMParser().parseFromString(Lm(section),'application/xml');
 if(xml.querySelector('parsererror'))throw Error('출근부 서식 파일을 읽지 못했습니다.');
 let table=oh(xml,'tbl')[0];
 if(!table)throw Error('출근부 서식의 표를 찾지 못했습니다.');
-let pagePr=oh(xml,'pagePr')[0],pageMargin=pagePr&&oh(pagePr,'margin')[0];if(pagePr){pagePr.setAttribute('landscape','NARROWLY');pagePr.setAttribute('width','59528');pagePr.setAttribute('height','84186');}if(pageMargin)for(let [key,value] of Object.entries({top:4252,left:8504,right:2835,bottom:0,header:0,footer:1417,gutter:0}))pageMargin.setAttribute(key,String(value));
+let pagePr=oh(xml,'pagePr')[0],pageMargin=pagePr&&oh(pagePr,'margin')[0];if(pagePr){pagePr.setAttribute('landscape','NARROWLY');pagePr.setAttribute('width','59528');pagePr.setAttribute('height','84186');}if(pageMargin)for(let [key,value] of Object.entries({top:5669,left:8504,right:2835,bottom:0,header:0,footer:1417,gutter:0}))pageMargin.setAttribute(key,String(value));
 let timeSectionHeight=4110;
 let month=e.month,year=+month.slice(0,4),monthNumber=+month.slice(5),daysInMonth=new Date(year,monthNumber,0).getDate(),
 records=e.records.filter(x=>x.date.startsWith(month+'-')&&x.name.trim()===e.name.trim()),
