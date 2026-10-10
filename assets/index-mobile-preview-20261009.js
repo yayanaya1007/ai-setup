@@ -58,7 +58,7 @@ if(xml.querySelector('parsererror'))throw Error('출근부 서식 파일을 읽�
 let table=oh(xml,'tbl')[0];
 if(!table)throw Error('출근부 서식의 표를 찾지 못했습니다.');
 let pagePr=oh(xml,'pagePr')[0],pageMargin=pagePr&&oh(pagePr,'margin')[0];if(pagePr){pagePr.setAttribute('landscape','NARROWLY');pagePr.setAttribute('width','59528');pagePr.setAttribute('height','84186');}if(pageMargin)for(let [key,value] of Object.entries({top:5669,left:8504,right:2835,bottom:0,header:0,footer:4252,gutter:0}))pageMargin.setAttribute(key,String(value));
-let activityHeight=5386,halfActivityHeight=2693;
+let activityHeight=5386,halfActivityHeight=2693,tripleActivityEntryHeight=1370;
 let month=e.month,year=+month.slice(0,4),monthNumber=+month.slice(5),daysInMonth=new Date(year,monthNumber,0).getDate(),
 records=e.records.filter(x=>x.date.startsWith(month+'-')&&x.name.trim()===e.name.trim()),
 names=[...new Set(records.map(x=>x.name.trim()).filter(Boolean))];
@@ -73,11 +73,11 @@ fillCellLines(campCell,['논산시자원봉사센터',campName]);
 let nameCell=ch(table,0,14);
 if(!nameCell)throw Error('활동가 이름 칸을 찾지 못했습니다.');
 sh(nameCell,[names[0]]);
-let hasTopSecond=records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<17&&x.start2&&x.end2;});
-let hasBottomSecond=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&x.start2&&x.end2;});
-let tripsFor=record=>record?.trips.filter(x=>x.start)||[],
-hasTopOverlap=records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<17&&x.start&&x.end&&x.start2&&x.end2&&tripsFor(x).length>=2;}),
-hasBottomOverlap=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&x.start&&x.end&&x.start2&&x.end2&&tripsFor(x).length>=2;}),
+let activityTimesFor=record=>[{start:record?.start,end:record?.end},...(record&&(record.showSecondTime||record.start2||record.end2)?[{start:record.start2,end:record.end2}]:[]),...(record?.additionalActivityTimes||[])].filter(x=>x.start&&x.end).slice(0,3),
+tripsFor=record=>record?.trips.filter(x=>x.start)||[],
+topActivityRowCount=Math.max(1,...records.filter(x=>{let day=+x.date.slice(-2);return day>=1&&day<17;}).map(x=>activityTimesFor(x).length)),
+bottomActivityRowCount=Math.max(1,...records.filter(x=>{let day=+x.date.slice(-2);return day>=17&&day<33;}).map(x=>activityTimesFor(x).length)),
+hasTopSecond=topActivityRowCount>1,hasBottomSecond=bottomActivityRowCount>1,
 hasTopTripTriple=records.some(x=>{let day=+x.date.slice(-2);return day>=1&&day<17&&tripsFor(x).length>=3;}),
 hasBottomTripTriple=records.some(x=>{let day=+x.date.slice(-2);return day>=17&&day<33&&tripsFor(x).length>=3;}),
 overlapEntryHeight=2055,tripleTripEntryHeight=1370,smallTimeCharId='17',smallTripCharId='11',
@@ -92,34 +92,34 @@ let makeBorder=(baseId,topType,bottomType)=>{let base=Array.from(borderList.chil
 splitBorders={first:{inner:makeBorder(13,'DOUBLE_SLIM','NONE'),outer:makeBorder(15,'DOUBLE_SLIM','NONE')},second:{inner:makeBorder(13,'SOLID','SOLID'),outer:makeBorder(15,'SOLID','SOLID')}};
 archive['Contents/header.xml']=Im(new XMLSerializer().serializeToString(headerDoc));
 }
-let insertActivityRow=(rowIndex,firstDay)=>{
+let insertActivityRow=(rowIndex,firstDay,timeIndex,sectionRowCount)=>{
 let rows=Array.from(table.children).filter(x=>x.localName==='tr'),firstRow=rows[rowIndex];
-if(!firstRow)throw Error('활동시간 칸을 찾지 못했습니다.');
-let newRow=firstRow.cloneNode(true),secondCells=[];
+if(!firstRow)throw Error('Activity time row not found.');
+let newRow=firstRow.cloneNode(true),newCells=[],rowEntryHeight=sectionRowCount>=3?tripleActivityEntryHeight:overlapEntryHeight;
 for(let cell of Array.from(firstRow.children).filter(x=>x.localName==='tc')){
 let addr=oh(cell,'cellAddr')[0],col=Number(addr?.getAttribute('colAddr')||0),span=oh(cell,'cellSpan')[0],size=oh(cell,'cellSz')[0];
-if(col===0){span?.setAttribute('rowSpan','2');size?.setAttribute('height',String(activityHeight));continue;}
-let rec=records.find(x=>+x.date.slice(-2)===firstDay+col-1);
-if(rec?.start2&&rec?.end2){
-let overlap=!!(rec.start&&rec.end&&tripsFor(rec).length>=2),splitHeight=overlap?overlapEntryHeight:halfActivityHeight;
-span?.setAttribute('rowSpan','1');size?.setAttribute('height',String(splitHeight));
-let second=cell.cloneNode(true),secondAddr=oh(second,'cellAddr')[0],secondSpan=oh(second,'cellSpan')[0],secondSize=oh(second,'cellSz')[0],borderKind=col===16?'outer':'inner';
-cell.setAttribute('borderFillIDRef',splitBorders.first[borderKind]);second.setAttribute('borderFillIDRef',splitBorders.second[borderKind]);
-secondAddr?.setAttribute('rowAddr',String(rowIndex+1));secondSpan?.setAttribute('rowSpan','1');secondSize?.setAttribute('height',String(splitHeight));
-fillCellLines(second,[rec.start2+'~',rec.end2]);secondCells.push(second);
-}else{span?.setAttribute('rowSpan','2');size?.setAttribute('height',String(activityHeight));}
+if(col===0){span?.setAttribute('rowSpan',String(sectionRowCount));size?.setAttribute('height',String(overlapEntryHeight*2));continue;}
+let rec=records.find(x=>+x.date.slice(-2)===firstDay+col-1),times=activityTimesFor(rec);
+if(times[timeIndex]){
+let cellRowSpan=timeIndex===times.length-1?sectionRowCount-timeIndex:1;
+span?.setAttribute('rowSpan','1');size?.setAttribute('height',String(rowEntryHeight));
+let copy=cell.cloneNode(true),copyAddr=oh(copy,'cellAddr')[0],copySpan=oh(copy,'cellSpan')[0],copySize=oh(copy,'cellSz')[0],borderKind=col===16?'outer':'inner';
+cell.setAttribute('borderFillIDRef',splitBorders.first[borderKind]);copy.setAttribute('borderFillIDRef',splitBorders.second[borderKind]);
+copyAddr?.setAttribute('rowAddr',String(rowIndex+timeIndex));copySpan?.setAttribute('rowSpan',String(cellRowSpan));copySize?.setAttribute('height',String(rowEntryHeight));
+fillCellLines(copy,[times[timeIndex].start+'~',times[timeIndex].end]);if(times.length>=3)oh(copy,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTripCharId));else oh(copy,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));newCells.push(copy);
 }
-secondCells.sort((x,y)=>Number(oh(x,'cellAddr')[0]?.getAttribute('colAddr')||0)-Number(oh(y,'cellAddr')[0]?.getAttribute('colAddr')||0));
-newRow.replaceChildren(...secondCells);
-newRow.querySelectorAll('tbl').forEach(x=>x.remove());
-firstRow.parentNode.insertBefore(newRow,firstRow.nextSibling);
-let tableSize=oh(table,'sz')[0];tableSize?.setAttribute('height',String(Number(tableSize.getAttribute('height')||0)+halfActivityHeight));
+}
+newCells.sort((x,y)=>Number(oh(x,'cellAddr')[0]?.getAttribute('colAddr')||0)-Number(oh(y,'cellAddr')[0]?.getAttribute('colAddr')||0));
+newRow.replaceChildren(...newCells);newRow.querySelectorAll('tbl').forEach(x=>x.remove());
+firstRow.parentNode.insertBefore(newRow,rows[rowIndex+timeIndex]||firstRow.nextSibling);
+let tableSize=oh(table,'sz')[0];tableSize?.setAttribute('height',String(Number(tableSize.getAttribute('height')||0)+rowEntryHeight));
 };
-if(hasTopSecond)insertActivityRow(3,1);
-if(hasBottomSecond)insertActivityRow(8+(hasTopSecond?1:0),17);
-let topActivityExtra=hasTopSecond?1:0,bottomActivityExtra=hasBottomSecond?1:0,
+for(let i=1;i<topActivityRowCount;i++)insertActivityRow(3,1,i,topActivityRowCount);
+let topActivityExtra=topActivityRowCount-1;
+for(let i=1;i<bottomActivityRowCount;i++)insertActivityRow(8+topActivityExtra,17,i,bottomActivityRowCount);
+let bottomActivityExtra=bottomActivityRowCount-1,
 topTripBase=4+topActivityExtra,bottomTripBase=9+topActivityExtra+bottomActivityExtra,
-topTripHeight=hasTopTripTriple?tripleTripEntryHeight:(hasTopOverlap?overlapEntryHeight:2835),bottomTripHeight=hasBottomTripTriple?tripleTripEntryHeight:(hasBottomOverlap?overlapEntryHeight:2835);
+topTripHeight=topTripRowCount>=3?tripleTripEntryHeight:(topTripRowCount===2?overlapEntryHeight:2835),bottomTripHeight=bottomTripRowCount>=3?tripleTripEntryHeight:(bottomTripRowCount===2?overlapEntryHeight:2835);
 let insertTripRows=(rowIndex,firstDay,maxRows,rowHeight)=>{
 if(maxRows<=1)return;
 let rows=Array.from(table.children).filter(x=>x.localName==='tr'),firstRow=rows[rowIndex];
@@ -128,18 +128,18 @@ let originalCells=Array.from(firstRow.children).filter(x=>x.localName==='tc'),ne
 for(let cell of originalCells){
 let addr=oh(cell,'cellAddr')[0],col=Number(addr?.getAttribute('colAddr')||0),span=oh(cell,'cellSpan')[0],size=oh(cell,'cellSz')[0];
 if(col===0){span?.setAttribute('rowSpan',String(maxRows));size?.setAttribute('height',String(rowHeight*maxRows));continue;}
-let record=records.find(x=>+x.date.slice(-2)===firstDay+col-1),count=tripsFor(record).length,hasSeparateRows=count>1;
-span?.setAttribute('rowSpan',String(hasSeparateRows?1:maxRows));size?.setAttribute('height',String(rowHeight*(hasSeparateRows?1:maxRows)));
+let record=records.find(x=>+x.date.slice(-2)===firstDay+col-1),count=tripsFor(record).length,entryHeight=count>=3?tripleTripEntryHeight:count===2?overlapEntryHeight:rowHeight;
+span?.setAttribute('rowSpan',String(count>1?1:maxRows));size?.setAttribute('height',String(count>1?entryHeight:rowHeight*maxRows));
 }
 for(let tripIndex=1;tripIndex<maxRows;tripIndex++){
 let row=firstRow.cloneNode(true),cells=[];
 for(let cell of originalCells){
 let col=Number(oh(cell,'cellAddr')[0]?.getAttribute('colAddr')||0);
 if(col===0)continue;
-let record=records.find(x=>+x.date.slice(-2)===firstDay+col-1);
-if(tripsFor(record).length<=1)continue;
-let copy=cell.cloneNode(true),span=oh(copy,'cellSpan')[0],size=oh(copy,'cellSz')[0];
-oh(copy,'cellAddr')[0]?.setAttribute('rowAddr',String(rowIndex+tripIndex));span?.setAttribute('rowSpan','1');size?.setAttribute('height',String(rowHeight));cells.push(copy);
+let record=records.find(x=>+x.date.slice(-2)===firstDay+col-1),count=tripsFor(record).length;
+if(count<=1||tripIndex>=count)continue;
+let copy=cell.cloneNode(true),span=oh(copy,'cellSpan')[0],size=oh(copy,'cellSz')[0],entryHeight=count>=3?tripleTripEntryHeight:overlapEntryHeight,cellRowSpan=tripIndex===count-1?maxRows-tripIndex:1;
+oh(copy,'cellAddr')[0]?.setAttribute('rowAddr',String(rowIndex+tripIndex));span?.setAttribute('rowSpan',String(cellRowSpan));size?.setAttribute('height',String(entryHeight));cells.push(copy);
 }
 row.replaceChildren(...cells);row.querySelectorAll('tbl').forEach(x=>x.remove());newRows.push(row);
 }
@@ -153,26 +153,25 @@ let allRows=Array.from(table.children).filter(x=>x.localName==='tr');
 table.setAttribute('rowCnt',String(allRows.length));
 allRows.forEach((row,rowIndex)=>Array.from(row.children).filter(x=>x.localName==='tc').forEach(cell=>oh(cell,'cellAddr')[0]?.setAttribute('rowAddr',String(rowIndex))));
 let totalMinutes=0;
-for(let [dateRow,firstDay,activityRow,tripRow,tripRowCount,sectionTripHeight,sectionHasOverlap,sectionHasTripTriple] of [[2,1,3,topTripBase,topTripRowCount,topTripHeight,hasTopOverlap,hasTopTripTriple],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomTripRowCount,bottomTripHeight,hasBottomOverlap,hasBottomTripTriple]]){
-let sectionHasSecond=firstDay===1?hasTopSecond:hasBottomSecond,
-baseActivityHeight=activityHeight;
-compactCell(ch(table,activityRow,0),sectionHasOverlap?overlapEntryHeight*2:(sectionHasSecond?activityHeight:baseActivityHeight));
+for(let [dateRow,firstDay,activityRow,tripRow,tripRowCount,sectionTripHeight,sectionHasTripTriple,sectionActivityRowCount] of [[2,1,3,topTripBase,topTripRowCount,topTripHeight,hasTopTripTriple,topActivityRowCount],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomTripRowCount,bottomTripHeight,hasBottomTripTriple,bottomActivityRowCount]]){
+compactCell(ch(table,activityRow,0),sectionActivityRowCount>1?overlapEntryHeight*2:activityHeight);
 compactCell(ch(table,tripRow,0),sectionTripHeight*tripRowCount);
 for(let i=0;i<16;i++){
 let day=firstDay+i,col=i+1,dateCell=ch(table,dateRow,col),activityCell=ch(table,activityRow,col),
 validDay=day<=daysInMonth,record=validDay?records.find(x=>+x.date.slice(-2)===day):undefined;
 if(dateCell)sh(dateCell,[validDay?String(day):'']);
-let hasSecondActivity=!!(record?.start2&&record?.end2),overlapDate=!!(sectionHasOverlap&&hasSecondActivity&&tripsFor(record).length>=2);
+let activityTimes=activityTimesFor(record),activityTimeCount=activityTimes.length,overlapDate=activityTimeCount>1&&tripsFor(record).length>=2;
 if(activityCell){
-let split=hasSecondActivity,height=sectionHasSecond?(split?(overlapDate?overlapEntryHeight:halfActivityHeight):activityHeight):activityHeight;
+let split=activityTimeCount>1,entryHeight=activityTimeCount>=3?tripleActivityEntryHeight:overlapEntryHeight,height=split?entryHeight:(sectionActivityRowCount>1?overlapEntryHeight*2:activityHeight);
+oh(activityCell,'cellSpan')[0]?.setAttribute('rowSpan',String(split?1:sectionActivityRowCount));
 compactCell(activityCell,height);
 if(record){
 let minutes=recordMinutes(record);
 if(minutes===null)throw Error(day+'일 시작·종료 시간을 확인해 주세요.');
 totalMinutes+=minutes;
-fillCellLines(activityCell,[record.start+'~',record.end]);
-if(overlapDate)oh(activityCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));
-if(split){let secondCell=ch(table,activityRow+1,col);if(!secondCell)throw Error(day+'일 두 번째 활동시간 칸을 찾지 못했습니다.');compactCell(secondCell,overlapDate?overlapEntryHeight:halfActivityHeight);fillCellLines(secondCell,[record.start2+'~',record.end2]);if(overlapDate)oh(secondCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));}
+fillCellLines(activityCell,[activityTimes[0].start+'~',activityTimes[0].end]);
+if(activityTimeCount>=2)oh(activityCell,'run').forEach(run=>run.setAttribute('charPrIDRef',activityTimeCount>=3?smallTripCharId:smallTimeCharId));
+for(let activityIndex=1;activityIndex<activityTimeCount;activityIndex++){let timeCell=ch(table,activityRow+activityIndex,col);if(!timeCell)throw Error(day+'일 추가 활동시간 칸을 찾지 못했습니다.');compactCell(timeCell,entryHeight);fillCellLines(timeCell,[activityTimes[activityIndex].start+'~',activityTimes[activityIndex].end]);oh(timeCell,'run').forEach(run=>run.setAttribute('charPrIDRef',activityTimeCount>=3?smallTripCharId:smallTimeCharId));}
 }else fillCellLines(activityCell,validDay?['00:00~','00:00']:['','']);
 }
 let trips=tripsFor(record);
@@ -181,8 +180,8 @@ let tripCell=ch(table,tripRow+tripIndex,col);
 if(!tripCell)continue;
 let sub=oh(tripCell,'subList')[0],sourceSub=oh(activityCell,'subList')[0],targetSub=sub;
 if(sourceSub&&targetSub){let sourceParagraphs=Array.from(sourceSub.children).filter(x=>x.localName==='p');Array.from(targetSub.children).filter(x=>x.localName==='p').forEach(x=>x.remove());sourceParagraphs.forEach(x=>targetSub.appendChild(x.cloneNode(true)))}
-compactCell(tripCell,sectionTripHeight);sub&&sub.setAttribute('lineWrap','SQUEEZE');sub&&sub.setAttribute('vertAlign','TOP');
-let trip=trips[tripIndex];fillCellLines(tripCell,trip?[trip.start+'~',trip.end||'']:['','']);if(sectionHasTripTriple)oh(tripCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTripCharId));else if(overlapDate)oh(tripCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));
+let tripCellHeight=trips.length>=3?tripleTripEntryHeight:trips.length===2?overlapEntryHeight:sectionTripHeight*tripRowCount;compactCell(tripCell,tripCellHeight);sub&&sub.setAttribute('lineWrap','SQUEEZE');sub&&sub.setAttribute('vertAlign','TOP');
+let trip=trips[tripIndex];fillCellLines(tripCell,trip?[trip.start+'~',trip.end||'']:['','']);if(trips.length>=3)oh(tripCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTripCharId));else if(trips.length>=2)oh(tripCell,'run').forEach(run=>run.setAttribute('charPrIDRef',smallTimeCharId));
 }
 let hoursCell=ch(table,tripRow+tripRowCount,col);
 if(hoursCell){let minutes=record?recordMinutes(record):null;sh(hoursCell,includeDailyHours&&minutes!==null?[String(Number((minutes/60).toFixed(1)))]:['']);}
