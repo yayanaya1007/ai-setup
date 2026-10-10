@@ -142,8 +142,8 @@ newRow.replaceChildren(...newCells);newRow.querySelectorAll('tbl').forEach(x=>x.
 }
 return splitGridIndices.length;
 };
-let extraRowsFor=(firstDay,gridUnits,entriesFor)=>{let splitGridIndices=new Set(),gridRows=gridUnits.length-1;for(let gridIndex=1;gridIndex<gridRows;gridIndex++){let unit=gridUnits[gridIndex],hasEntryStart=records.some(record=>{let day=+record.date.slice(-2);if(day<firstDay||day>=firstDay+16)return false;let count=entriesFor(record).length;if(!count)return false;let entryIndex=unit/(6/count);return Number.isInteger(entryIndex)&&entryIndex>0&&entryIndex<count;});if(hasEntryStart)splitGridIndices.add(gridIndex);}return splitGridIndices.size;};
-let topActivityExtra=extraRowsFor(1,topActivityGrid,activityTimesFor),bottomActivityExtra=extraRowsFor(17,bottomActivityGrid,activityTimesFor),topTripExtra=extraRowsFor(1,topTripGrid,tripsFor),bottomTripExtra=extraRowsFor(17,bottomTripGrid,tripsFor);
+let rowLayoutFor=(firstDay,gridUnits,entriesFor)=>{let splitGridIndices=new Set(),gridRows=gridUnits.length-1;for(let gridIndex=1;gridIndex<gridRows;gridIndex++){let unit=gridUnits[gridIndex],hasEntryStart=records.some(record=>{let day=+record.date.slice(-2);if(day<firstDay||day>=firstDay+16)return false;let count=entriesFor(record).length;if(!count)return false;let entryIndex=unit/(6/count);return Number.isInteger(entryIndex)&&entryIndex>0&&entryIndex<count;});if(hasEntryStart)splitGridIndices.add(gridIndex);}let physicalBoundary=gridIndex=>gridIndex===0?0:1+Array.from(splitGridIndices).filter(index=>index<gridIndex).length;return{extraRows:splitGridIndices.size,rowOffset:(record,entryIndex)=>{let count=entriesFor(record).length,gridIndex=gridUnits.indexOf(entryIndex*6/count);return physicalBoundary(gridIndex);}};};
+let topActivityLayout=rowLayoutFor(1,topActivityGrid,activityTimesFor),bottomActivityLayout=rowLayoutFor(17,bottomActivityGrid,activityTimesFor),topTripLayout=rowLayoutFor(1,topTripGrid,tripsFor),bottomTripLayout=rowLayoutFor(17,bottomTripGrid,tripsFor),topActivityExtra=topActivityLayout.extraRows,bottomActivityExtra=bottomActivityLayout.extraRows,topTripExtra=topTripLayout.extraRows,bottomTripExtra=bottomTripLayout.extraRows;
 insertTimeRows(3,1,topActivityGrid,activityTimesFor);
 let bottomActivityBase=8+topActivityExtra;insertTimeRows(bottomActivityBase,17,bottomActivityGrid,activityTimesFor);
 let topTripBase=4+topActivityExtra,bottomTripBase=9+topActivityExtra+bottomActivityExtra;
@@ -153,7 +153,7 @@ let allRows=Array.from(table.children).filter(x=>x.localName==='tr');
 table.setAttribute('rowCnt',String(allRows.length));
 allRows.forEach((row,rowIndex)=>Array.from(row.children).filter(x=>x.localName==='tc').forEach(cell=>oh(cell,'cellAddr')[0]?.setAttribute('rowAddr',String(rowIndex))));
 let totalMinutes=0;
-for(let [dateRow,firstDay,activityRow,tripRow,activityGrid,tripGrid,activityPhysicalRows] of [[2,1,3,topTripBase,topActivityGrid,topTripGrid,1+topActivityExtra],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomActivityGrid,bottomTripGrid,1+bottomActivityExtra]]){
+for(let [dateRow,firstDay,activityRow,tripRow,activityGrid,tripGrid,activityPhysicalRows,activityLayout,tripLayout] of [[2,1,3,topTripBase,topActivityGrid,topTripGrid,1+topActivityExtra,topActivityLayout,topTripLayout],[7+topActivityExtra+topTripExtra,17,8+topActivityExtra+topTripExtra,9+topActivityExtra+topTripExtra+bottomActivityExtra,bottomActivityGrid,bottomTripGrid,1+bottomActivityExtra,bottomActivityLayout,bottomTripLayout]]){
 let activityRows=activityGrid.length-1,tripRows=tripGrid.length-1;
 compactCell(ch(table,activityRow,0),timeSectionHeight);
 compactCell(ch(table,tripRow,0),timeSectionHeight);
@@ -171,13 +171,13 @@ if(record){
 let minutes=recordMinutes(record);
 if(minutes===null)throw Error(day+'일 시작·종료 시간을 확인해 주세요.');
 totalMinutes+=minutes;
-for(let activityIndex=0;activityIndex<activityTimeCount;activityIndex++){let activityStart=activityGrid.indexOf(activityIndex*6/activityTimeCount),timeCell=ch(table,activityRow+activityStart,col);if(!timeCell)throw Error(day+'일 추가 활동시간 칸을 찾지 못했습니다.');fillCellLines(timeCell,[activityTimes[activityIndex].start+'~',activityTimes[activityIndex].end]);oh(timeCell,'run').forEach(run=>run.setAttribute('charPrIDRef',timeCharId(activityTimeCount)));oh(timeCell,'subList')[0]?.setAttribute('vertAlign','CENTER');}
+for(let activityIndex=0;activityIndex<activityTimeCount;activityIndex++){let activityStart=activityLayout.rowOffset(record,activityIndex),timeCell=ch(table,activityRow+activityStart,col);if(!timeCell)throw Error(day+'일 추가 활동시간 칸을 찾지 못했습니다.');fillCellLines(timeCell,[activityTimes[activityIndex].start+'~',activityTimes[activityIndex].end]);oh(timeCell,'run').forEach(run=>run.setAttribute('charPrIDRef',timeCharId(activityTimeCount)));oh(timeCell,'subList')[0]?.setAttribute('vertAlign','CENTER');}
 }else{fillCellLines(activityCell,validDay?['00:00~','00:00']:['','']);oh(activityCell,'run').forEach(run=>run.setAttribute('charPrIDRef','7'));}
 }
 let trips=tripsFor(record);
 let tripCount=trips.length,tripSpan=tripCount?tripGrid.indexOf(6/tripCount)-tripGrid.indexOf(0):tripRows;
 for(let tripIndex=0;tripIndex<tripCount;tripIndex++){
-let tripStart=tripGrid.indexOf(tripIndex*6/tripCount),tripCell=ch(table,tripRow+tripStart,col);
+let tripStart=tripLayout.rowOffset(record,tripIndex),tripCell=ch(table,tripRow+tripStart,col);
 if(!tripCell)continue;
 let tripCellHeight=timeSectionHeight/tripCount;compactCell(tripCell,tripCellHeight,tripCount>=3?tightTimeParaId:'23');let sub=oh(tripCell,'subList')[0],margin=oh(tripCell,'cellMargin')[0];sub?.setAttribute('lineWrap','SQUEEZE');sub?.setAttribute('vertAlign','CENTER');if(margin){margin.setAttribute('top','0');margin.setAttribute('bottom','0');}
 let trip=trips[tripIndex];fillCellLines(tripCell,[trip.start+'~',trip.end||'']);oh(tripCell,'run').forEach(run=>run.setAttribute('charPrIDRef',timeCharId(tripCount)));
